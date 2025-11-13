@@ -1,0 +1,64 @@
+{
+	"name": "backend",
+	"image": "ghcr.io/astral-sh/uv:debian",
+	"workspaceFolder": "/workspaces/let-s-become-an-enginner/backend",
+    "updateRemoteUserUID": true,
+	"features": {
+		"ghcr.io/devcontainers/features/common-utils:2": {}
+	},
+	"mounts": [
+		{
+			"source": "uv-cache",
+			"target": "/root/.cache/uv",
+			"type": "volume"
+		},
+		{
+			"target": "${containerWorkspaceFolder}/.venv",
+			"type": "volume"
+		}
+	],
+	"containerEnv": {
+		"UV_LINK_MODE": "copy"
+	},
+	"postCreateCommand": "git config --global --add safe.directory /workspace && uv sync",
+	"postAttachCommand": "uv run flask run --debugger --reload",
+	"customizations": {
+		"vscode": {
+			"extensions": [
+                "charliermarsh.ruff",
+                "kevinrose.vsc-python-indent",
+                "mosapride.zenkaku",
+                "ms-azuretools.vscode-docker",
+                "ms-python.python",
+                "ms-python.vscode-pylance",
+                "njpwerner.autodocstring",
+                "redhat.vscode-yaml",
+                "shardulm94.trailing-spaces",
+                "tamasfe.even-better-toml",
+                "yzhang.markdown-all-in-one"
+			],
+            "settings": {
+                "git.openRepositoryInParentFolders": "always",
+                "editor.defaultFormatter": "charliermarsh.ruff",
+                "editor.formatOnSave": true,
+                "[python]": {
+                    "editor.codeActionsOnSave": {
+                        "source.fixAll": "explicit",
+                        "source.organizeImports": "explicit"
+                    },
+                    "editor.defaultFormatter": "charliermarsh.ruff",
+                    "editor.formatOnSave": true
+                },
+                "python.linting.enabled": true,
+                "python.linting.ruffEnabled": true,
+                "files.autoSave": "afterDelay",
+                "files.saveAll": true,
+                "ruff.lint.rules": ["E", "F", "W", "I"],
+                "ruff.lineLength": 120,
+                "ruff.fixAll": true,
+                "ruff.organizeImports": true,
+                "ruff.format": true
+            }
+		}
+	}
+}
