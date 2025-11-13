@@ -7,7 +7,7 @@ from src.tests import test_module
 app = Flask(__name__)
 
 # flask-restxの設定
-api = Api(app, version="1.0", title="ReadFit API", description="An AI powered novels API")
+api = Api(app, version="1.0", title="ReadFit API", description="時間ぴったり読書アプリAPI")
 
 # /tests以下のエンドポイントを登録
 app.register_blueprint(test_module)
@@ -17,6 +17,11 @@ api.add_namespace(test_api, path="/tests")
 @api.route("/hello")
 class hello(Resource):
     def get(self):
+        """hello worldチェック
+
+        Returns:
+            string: 固定メッセージ
+        """
         return "Hello World"
 
 
