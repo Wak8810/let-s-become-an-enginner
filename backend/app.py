@@ -1,14 +1,28 @@
 from flask import Flask
+from flask_restx import Api, Resource
 
-from src.test import test_bp
+from src.tests import api as test_api
+from src.tests import test_module
 
 app = Flask(__name__)
-app.register_blueprint(test_bp)
+
+# flask-restxの設定
+api = Api(app, version="1.0", title="ReadFit API", description="時間ぴったり読書アプリAPI")
+
+# /tests以下のエンドポイントを登録
+app.register_blueprint(test_module)
+api.add_namespace(test_api, path="/tests")
 
 
-@app.route("/")
-def hello():
-    return "Hello World"
+@api.route("/hello")
+class hello(Resource):
+    def get(self):
+        """hello worldチェック
+
+        Returns:
+            string: 固定メッセージ
+        """
+        return "Hello World"
 
 
 def main():
