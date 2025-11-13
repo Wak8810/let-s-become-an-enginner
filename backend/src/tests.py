@@ -5,9 +5,9 @@ from flask_restx import Namespace, Resource, fields
 test_module = Blueprint("test_module", __name__, url_prefix="/tests")
 api = Namespace("tests", description="Test operations")
 
-# /tests/<name> にアクセスしたときのリクエストボディ
-test_name_model = api.model(
-    "TestName",
+# /tests/<test_id> にアクセスしたときのリクエストボディ
+test_id_model = api.model(
+    "TestId",
     {
         "id": fields.String(readonly=True, description="The content unique identifier"),
         "content": fields.String(required=True, description="The content body"),
@@ -38,7 +38,7 @@ class TestId(Resource):
         }
 
     @api.doc("post_test_id")
-    @api.expect(test_name_model)
+    @api.expect(test_id_model)
     def post(self, test_id):
         body = request.json
         return {
