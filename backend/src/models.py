@@ -77,3 +77,21 @@ class Chapter(db.Model):
 
     def __repr__(self):
         return f"<Chapter {self.chapter_number} of Novel {self.novel_id}>"
+
+
+class Test(db.Model):
+    """
+    テストテーブル
+
+    テスト用のデータを管理します。
+    """
+
+    __tablename__ = "tests"
+
+    id = db.Column(db.String(32), primary_key=True, default=lambda: uuid4().hex)
+    content = db.Column(db.String(100), nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.now)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.now, onupdate=datetime.now)
+
+    def __repr__(self):
+        return f"<Test Content: {self.content}>"
