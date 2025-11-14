@@ -1,7 +1,8 @@
 import 'dart:convert';
+import 'package:novel_app/models/novel.dart';
 
 class GetUserAllNovels {
-  static Future<List<Map<String, dynamic>>> fetchNovels() async {
+  static Future<List<Novel>> fetchNovels() async {
     await Future.delayed(const Duration(seconds: 1));
 
     final String dummyNovelsJson = """
@@ -25,6 +26,6 @@ class GetUserAllNovels {
     """;
 
     final List<dynamic> decodedJson = json.decode(dummyNovelsJson);
-    return decodedJson.cast<Map<String, dynamic>>();
+    return decodedJson.map((json) => Novel.fromJson(json as Map<String, dynamic>)).toList();
   }
 }

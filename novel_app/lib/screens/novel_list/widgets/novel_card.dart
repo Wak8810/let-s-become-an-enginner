@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:novel_app/models/novel.dart';
 
 class NovelCard extends StatelessWidget {
-  final Map<String, dynamic> novel;
+  final Novel novel;
 
   const NovelCard({super.key, required this.novel});
 
@@ -15,7 +16,7 @@ class NovelCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              novel['title'] ?? 'No Title',
+              novel.title,
               style: const TextStyle(
                 fontSize: 18.0,
                 fontWeight: FontWeight.bold,
@@ -25,7 +26,7 @@ class NovelCard extends StatelessWidget {
             ),
             const SizedBox(height: 8.0),
             Text(
-              novel['content'] ?? 'No Content',
+              novel.content,
               overflow: TextOverflow.ellipsis,
               maxLines: 1,
             ),
@@ -34,7 +35,7 @@ class NovelCard extends StatelessWidget {
               children: [
                 const Spacer(),
                 Text(
-                  '作成日時: ${novel['created_at'] ?? '不明'}',
+                  '作成日時: ${novel.createdAt}',
                   style: const TextStyle(
                     fontSize: 12.0,
                     color: Colors.grey,
