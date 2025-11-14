@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
-import 'viewpage.dart';
+import '../novel_view/novel_view_screen.dart';
 
-class GenerateNovelPage extends StatefulWidget {
-  const GenerateNovelPage({super.key});
+class NovelGenerateScreen extends StatefulWidget {
+  const NovelGenerateScreen({super.key});
 
   @override
-  State<GenerateNovelPage> createState() => _GenerateNovelPageState();
+  State<NovelGenerateScreen> createState() => _NovelGenerateScreenState();
 }
 
-class _GenerateNovelPageState extends State<GenerateNovelPage> {
+class _NovelGenerateScreenState extends State<NovelGenerateScreen> {
   String isSelectedValue = 'あ';
   @override
   Widget build(BuildContext context) {
@@ -43,7 +43,7 @@ class _GenerateNovelPageState extends State<GenerateNovelPage> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => ViewNovelPage(title: "ここに小説のタイトル"),
+                    builder: (context) => NovelViewScreen(title: "ここに小説のタイトル"),
                   ),
                 );
               },
