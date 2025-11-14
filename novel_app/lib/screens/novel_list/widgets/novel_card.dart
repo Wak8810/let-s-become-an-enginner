@@ -22,7 +22,7 @@ class NovelCard extends StatelessWidget {
                   child: Text(
                     novel.title,
                     style: const TextStyle(
-                      fontSize: 18.0,
+                      fontSize: 14.0,
                       fontWeight: FontWeight.bold,
                     ),
                     overflow: TextOverflow.ellipsis,
@@ -40,20 +40,20 @@ class NovelCard extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 8.0),
+            const SizedBox(height: 12.0),
             Text(
               novel.content,
               overflow: TextOverflow.ellipsis,
               maxLines: 1,
             ),
-            const SizedBox(height: 8.0),
+            const SizedBox(height: 12.0),
             Row(
               children: [
                 const Spacer(),
                 Text(
                   '作成日時: ${novel.createdAt}',
                   style: const TextStyle(
-                    fontSize: 12.0,
+                    fontSize: 10.0,
                     color: Colors.grey,
                   ),
                 ),
