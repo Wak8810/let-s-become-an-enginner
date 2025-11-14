@@ -44,7 +44,7 @@ class Novel(db.Model):
     id = db.Column(db.String(32), primary_key=True, default=lambda: uuid4().hex)
     title = db.Column(db.String(200), nullable=False)  # AIが生成した小説のタイトル
     overall_plot = db.Column(db.Text, nullable=False)  # AIが生成した小説の全体プロット
-    # status = db.Column(db.String(20), default="PENDING")  # PENDING, GENERATING, COMPLETED
+    # status = db.Column(db.String(20), default="PENDING")  # PENDING, GENERATING, COMPLETED, FAILED
     genre = db.Column(db.String(50), nullable=True)
     style = db.Column(db.String(50), nullable=True)
     text_length = db.Column(db.Integer, nullable=True)
@@ -88,9 +88,13 @@ class Test(db.Model):
 
     __tablename__ = "tests"
 
+    # テスト項目を一意に識別するID。UUID形式の文字列。
     id = db.Column(db.String(32), primary_key=True, default=lambda: uuid4().hex)
+    # テスト用データの内容。最大100文字までの文字列。
     content = db.Column(db.String(100), nullable=False)
+    # レコードの作成日時。デフォルトで現在日時が設定される。
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.now)
+    # レコードの最終更新日時。デフォルトで現在日時が設定され、更新時に自動的に更新される。
     updated_at = db.Column(db.DateTime, nullable=False, default=datetime.now, onupdate=datetime.now)
 
     def __repr__(self):

@@ -8,9 +8,9 @@ from src.models import Test
 test_module = Blueprint("test_module", __name__)
 api = Namespace("tests", description="API接続テスト用エンドポイント群")
 
-# テスト用データ登録用リクエストボディ
+# テスト用データ登録・更新用リクエストボディスキーマ
 test_insert_and_update_model = api.model(
-    """test用データ登録用リクエストボディ
+    """test用データ登録・更新用リクエストボディ
     """
     "Test",
     {
@@ -20,6 +20,8 @@ test_insert_and_update_model = api.model(
 
 # テスト用データスキーマ
 test_item_model = api.model(
+    """テスト用データスキーマ
+    """
     "TestListItem",
     {
         "test_id": fields.String(attribute="id", description="テスト用データのID"),
@@ -45,7 +47,7 @@ class TestAccess(Resource):
         """testsテーブルのすべての行を取得する
 
         Returns:
-            _type_: _description_
+            dict: 取得したデータの情報
         """
         try:
             tests = db.session.query(Test).all()
@@ -93,7 +95,7 @@ class TestId(Resource):
             test_id (str): 取得対象のtest_id
 
         Returns:
-            dict: test_idを含むメッセージ
+            dict: test_idに対応するデータ
         """
         try:
             # データベースからtest_idに対応するデータを取得
@@ -115,7 +117,7 @@ class TestId(Resource):
             test_id (str): 新しいtest_id
 
         Returns:
-            dict: test_idとリクエストボディを含むメッセージ
+            dict: test_idに対応する更新後のデータ
         """
         body = request.json
         try:
