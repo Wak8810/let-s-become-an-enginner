@@ -1,9 +1,11 @@
+import os
+
+from dotenv import load_dotenv
 from flask import Blueprint, request
 from flask_restx import Namespace, Resource, fields
 from google import generativeai as genai
 
-# API KEY
-GEMINI_API_KEY = "SET GEMINI API KEY"
+load_dotenv()
 
 # URI "/novels/" 以下を定義.
 novels_module = Blueprint("novel_module", __name__)
@@ -39,7 +41,7 @@ class NovelStart(Resource):
             style = requested_param.get("style")
             point += 1
             # ai-apiとのやり取り
-            genai.configure(api_key=GEMINI_API_KEY)
+            genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
             point += 1
             model = genai.GenerativeModel("gemini-2.0-flash")
             point += 1
