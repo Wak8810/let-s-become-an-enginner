@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:novel_app/utils/get_user_all_novels.dart';
 import 'package:novel_app/screens/novel_list/widgets/novel_card.dart';
+import 'package:novel_app/models/novel.dart';
 
 class NovelListScreen extends StatefulWidget {
   const NovelListScreen({super.key});
@@ -10,7 +11,7 @@ class NovelListScreen extends StatefulWidget {
 }
 
 class _NovelListScreenState extends State<NovelListScreen> {
-  Future<List<Map<String, dynamic>>>? _novels;
+  Future<List<Novel>>? _novels;
 
   @override
   void initState() {
@@ -24,7 +25,7 @@ class _NovelListScreenState extends State<NovelListScreen> {
       appBar: AppBar(
         title: const Text('小説一覧'),
       ),
-      body: FutureBuilder<List<Map<String, dynamic>>>(
+      body: FutureBuilder<List<Novel>>(
         future: _novels,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
