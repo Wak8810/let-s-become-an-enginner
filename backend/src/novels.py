@@ -34,14 +34,18 @@ class NovelStart(Resource):
         try:
             point = 0
             requested_param = request.get_json()
-            want_to = requested_param.get("genre")
+            genre = requested_param.get("genre")
+            text_length = requested_param.get("textLen")
+            style = requested_param.get("style")
             point += 1
             # ai-apiとのやり取り
             genai.configure(api_key=GEMINI_API_KEY)
             point += 1
             model = genai.GenerativeModel("gemini-2.0-flash")
             point += 1
-            response = model.generate_content(f"{want_to}をお願いします。")
+            response = model.generate_content(
+                f"{genre}の小説を{style}スタイルで、長さは{text_length}文字程度で出力してください。"
+            )
             point += 1
 
             return response.text
