@@ -39,7 +39,7 @@ class NovelGenerator:
     def generate_chapter(self, plot, style, previous_chapter=None, chapter_num=0):
         return self.model.generate_content(
             f"""{plot}の小説の第{chapter_num}章を、以下の情報を参考に生成してください。
-            {f"- 文体:{style}" if type(style) == type("") else ""}
+            {f"- 文体:{style}" if isinstance(style, str) else ""}
             {f"下記は前の章です:\n{previous_chapter}" if previous_chapter else ""}
             """
         ).text
