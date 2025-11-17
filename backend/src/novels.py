@@ -1,9 +1,13 @@
+import json
 import os
 
 from dotenv import load_dotenv
-from flask import Blueprint, request
+from flask import Blueprint, Response, request, stream_with_context
 from flask_restx import Namespace, Resource, fields
 from google import generativeai as genai
+
+from src.database import db
+from src.models import Chapter, Novel
 
 load_dotenv()
 
@@ -11,13 +15,83 @@ load_dotenv()
 novels_module = Blueprint("novel_module", __name__)
 api = Namespace("novels", description="役割はタスク分解ドキュメントを参照してください…")
 
-# --- /novels/ ---
+
+# 小説生成系を担当するクラス.
+# ai側でのエラーを処理しないので注意.
+class NovelGenerator:
+    def __init__(self):
+        self.model = None
+        self.is_generating = False
+        self.novel_db = None
+        self.chapter_db = None
+
+    def setup_ai(self):
+        genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+        self.model = genai.GenerativeModel("gemini-2.0-flash")
+
+    # プロット生成.
+    def generate_plot(self, genre, text_length):
+        return self.model.generate_content(
+            f"{genre}の小説のプロットを具体的に作成してください。小説は{text_length}文字程度になります。"
+        ).text
+
+    # チャプター生成.
+    def generate_chapter(self, plot, style, previous_chapter=None, chapter_num=0):
+        return self.model.generate_content(
+            f"""{plot}の小説の第{chapter_num}章を、以下の情報を参考に生成してください。
+            {f"- 文体:{style}" if isinstance(style, str) else ""}
+            {f"下記は前の章です:\n{previous_chapter}" if previous_chapter else ""}
+            """
+        ).text
+
+    # 小説生成のジェネレーター.
+    def generate_novel(self, genre, text_length, style):
+        self.is_generating = True
+        plot = self.generate_plot(genre, text_length)
+        yield 0, plot
+        total_text_len = 0
+        previous_chapter = None
+        count = 1
+        while True:
+            chapter = self.generate_chapter(
+                plot=plot, style=style, previous_chapter=previous_chapter, chapter_num=count
+            )
+            total_text_len += len(chapter)
+            previous_chapter = chapter
+            yield count, chapter
+            if total_text_len > text_length:
+                self.is_generating = False
+                return
+            previous_chapter = chapter
+            count += 1
+
+
+# --- model ---
 novel_start_model = api.model(
     "novelStart",
     {
         "genre": fields.String(description="novel's genre // now, only this is sent to ai -2025/11/14 3:00"),
         "textLen": fields.Integer(required=True, description="required novel's length"),
         "style": fields.String(description="novel's style"),
+    },
+)
+novel_item_model = api.model(
+    "NovelListItem",
+    {
+        "novel_id": fields.String(attribute="id"),
+        "title": fields.String(),
+        "overall_plot": fields.String(),
+        "created_at": fields.DateTime(),
+        "updated_at": fields.DateTime(),
+    },
+)
+chapter_item_model = api.model(
+    "ChapterListItem",
+    {
+        "chapter_id": fields.String(attribute="id"),
+        "content": fields.String(),
+        "created_at": fields.DateTime(),
+        "updated_at": fields.DateTime(),
     },
 )
 
@@ -34,22 +108,96 @@ class NovelStart(Resource):
 
         """
         try:
-            point = 0
+            # リクエストボディの解凍.
             requested_param = request.get_json()
             genre = requested_param.get("genre")
             text_length = requested_param.get("textLen")
             style = requested_param.get("style")
-            point += 1
-            # ai-apiとのやり取り
-            genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-            point += 1
-            model = genai.GenerativeModel("gemini-2.0-flash")
-            point += 1
-            response = model.generate_content(
-                f"{genre}の小説を{style}スタイルで、長さは{text_length}文字程度で出力してください。"
-            )
-            point += 1
 
-            return response.text
+            # db - まずテストユーザーを作成または取得
+            from src.models import User
+
+            test_user = db.session.query(User).filter_by(username="test_user").first()
+            if not test_user:
+                test_user = User(username="test_user", email="test@example.com")
+                db.session.add(test_user)
+                db.session.commit()
+
+            novel_data = Novel(
+                style=style,
+                genre=genre,
+                text_length=text_length,
+                title="test",  # debug
+                overall_plot="",  # debug
+                user_id=test_user.id,
+            )
+            db.session.add(novel_data)
+            db.session.commit()
+            print(
+                db.session.query(Novel.created_at).filter_by(id=novel_data.id).order_by(Novel.created_at.desc()).first()
+            )
+            # 小説IDを保存（ジェネレータ内でも安全に使用可能）
+            novel_id = novel_data.id
+
+            # ai-apiとのやり取り
+            novelist = NovelGenerator()
+            novelist.setup_ai()
+
+            # NovelGeneratorのgenerate_novelメソッドの出力に以下の処理をする.
+            # - DB登録
+            # - レスポンスのjsonボディに変形
+            def novel_generater():
+                try:
+                    gen = novelist.generate_novel(genre, text_length, style)
+                    count, plot = next(gen)
+
+                    # プロットの保存
+                    novel = db.session.get(Novel, novel_id)
+                    novel.overall_plot = plot
+                    db.session.commit()
+                    print(f"Plot generated: {count}")
+                    yield json.dumps({"response_count": count, "plot": plot}, ensure_ascii=False) + "\n"
+
+                    for count, chapter in gen:
+                        print(f"Chapter {count} generated, length: {len(chapter)}")
+                        chapter_data = Chapter(chapter_number=count, content=chapter, novel_id=novel_id)
+                        db.session.add(chapter_data)
+                        print(f"Chapter {count} added to session")
+                        yield json.dumps({"response_count": count, "chapter": chapter}, ensure_ascii=False) + "\n"
+
+                    db.session.commit()
+                    print("All chapters committed to database")
+                    yield json.dumps({"response_count": count + 1, "fin": True}, ensure_ascii=False) + "\n"
+                except Exception as e:
+                    print(f"Error in novel_generater: {str(e)}")
+                    import traceback
+
+                    traceback.print_exc()
+                    yield json.dumps({"error": str(e)}, ensure_ascii=False) + "\n"
+
+            return Response(
+                stream_with_context(novel_generater()),
+                mimetype="application/json",
+                headers={"Content-Type": "application/json; charset=utf-8"},
+            )
         except Exception as e:
-            return {"error": str(e), "point": point}
+            return {"status": False, "error": str(e)}
+
+    @api.doc("get_novels")
+    def get(self):
+        """novelsとchaptersのデータベースの数を返す
+
+        Returns:
+            n:count of novels
+            c:count of chapters
+        """
+        try:
+            n = 0
+            c = 0
+            novels = db.session.query(Novel).all()
+            chapters = db.session.query(Chapter).all()
+            n = len(novels)
+            c = len(chapters)
+            return {"n": n, "c": c}
+        except Exception as e:
+            return {"error": str(e), "n": n, "c": c}
