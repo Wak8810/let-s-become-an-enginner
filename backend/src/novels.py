@@ -57,6 +57,7 @@ class NovelGenerator:
                 plot=plot, style=style, previous_chapter=previous_chapter, chapter_num=count
             )
             total_text_len += len(chapter)
+            previous_chapter = chapter
             yield count, chapter
             if total_text_len > text_length:
                 self.is_generating = False
