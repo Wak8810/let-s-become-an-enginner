@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:novel_app/models/novel.dart';
 
 class NovelCard extends StatelessWidget {
-  final Map<String, dynamic> novel;
+  final Novel novel;
 
   const NovelCard({super.key, required this.novel});
 
@@ -14,29 +15,45 @@ class NovelCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
+                    novel.title,
+                    style: const TextStyle(
+                      fontSize: 14.0,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
+                ),
+                const SizedBox(width: 8.0),
+                Text(
+                  '要求時間: ${novel.readingMinutes}分',
+                  textAlign: TextAlign.right,
+                  style: const TextStyle(
+                    fontSize: 12.0,
+                    color: Colors.grey,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12.0),
             Text(
-              novel['title'] ?? 'No Title',
-              style: const TextStyle(
-                fontSize: 18.0,
-                fontWeight: FontWeight.bold,
-              ),
+              novel.content,
               overflow: TextOverflow.ellipsis,
               maxLines: 1,
             ),
-            const SizedBox(height: 8.0),
-            Text(
-              novel['content'] ?? 'No Content',
-              overflow: TextOverflow.ellipsis,
-              maxLines: 1,
-            ),
-            const SizedBox(height: 8.0),
+            const SizedBox(height: 12.0),
             Row(
               children: [
                 const Spacer(),
                 Text(
-                  '作成日時: ${novel['created_at'] ?? '不明'}',
+                  '作成日時: ${novel.createdAt}',
                   style: const TextStyle(
-                    fontSize: 12.0,
+                    fontSize: 10.0,
                     color: Colors.grey,
                   ),
                 ),
