@@ -2,7 +2,7 @@ import json
 import os
 
 from dotenv import load_dotenv
-from flask import Blueprint, Response, request
+from flask import Blueprint, Response, request, stream_with_context
 from flask_restx import Namespace, Resource, fields
 from google import generativeai as genai
 
@@ -32,7 +32,7 @@ class NovelGenerater:
     # プロット生成.
     def generate_plot(self, genre, text_length):
         return self.model.generate_content(
-            f"{genre}の小説のプロットを具体的に作成してください。小説は{text_length}程度になります。"
+            f"{genre}の小説のプロットを具体的に作成してください。小説は{text_length}文字程度になります。"
         ).text
 
     # チャプター生成.
@@ -57,12 +57,11 @@ class NovelGenerater:
                 plot=plot, style=style, previous_chapter=previous_chapter, chapter_num=count
             )
             total_text_len += len(chapter)
+            yield count, chapter
             if total_text_len > text_length:
                 self.is_generating = False
-                yield count, chapter  # ここにreturnを使ってはいけないbyAI(未検証).
                 return
-            else:
-                yield count, chapter
+            previous_chapter = chapter
             count += 1
 
 
@@ -113,17 +112,32 @@ class NovelStart(Resource):
             genre = requested_param.get("genre")
             text_length = requested_param.get("textLen")
             style = requested_param.get("style")
-            # db
+
+            # db - まずテストユーザーを作成または取得
+            from src.models import User
+
+            test_user = db.session.query(User).filter_by(username="test_user").first()
+            if not test_user:
+                test_user = User(username="test_user", email="test@example.com")
+                db.session.add(test_user)
+                db.session.commit()
+
             novel_data = Novel(
                 style=style,
                 genre=genre,
                 text_length=text_length,
                 title="test",  # debug
                 overall_plot="",  # debug
-                user_id="",  # debug
+                user_id=test_user.id,
             )
             db.session.add(novel_data)
             db.session.commit()
+            print(
+                db.session.query(Novel.created_at).filter_by(id=novel_data.id).order_by(Novel.created_at.desc()).first()
+            )
+            # 小説IDを保存（ジェネレータ内でも安全に使用可能）
+            novel_id = novel_data.id
+
             # ai-apiとのやり取り
             novelist = NovelGenerater()
             novelist.setup_ai()
@@ -135,20 +149,36 @@ class NovelStart(Resource):
                 try:
                     gen = novelist.generate_novel(genre, text_length, style)
                     count, plot = next(gen)
-                    novel_data.overall_plot = plot
-                    db.session.commit()
-                    yield json.dumps({"response_count": count, "plot": plot})
-                    while novelist.is_generating:
-                        count, chapter = next(gen)
-                        chapter_data = Chapter(chapter_number=count, content=chapter, novel_id=novel_data.id)
-                        db.session.add(chapter_data)
-                        yield json.dumps({"response_count": count, "chapter": chapter})
-                    db.session.commit()
-                    return json.dumps({"response_count": count + 1, "fin": True})
-                except Exception as e:
-                    return json.dumps({"error": str(e)})
 
-            return Response(novel_generater(), mimetype="text/plain")
+                    # プロットの保存
+                    novel = db.session.get(Novel, novel_id)
+                    novel.overall_plot = plot
+                    db.session.commit()
+                    print(f"Plot generated: {count}")
+                    yield json.dumps({"response_count": count, "plot": plot}, ensure_ascii=False) + "\n"
+
+                    for count, chapter in gen:
+                        print(f"Chapter {count} generated, length: {len(chapter)}")
+                        chapter_data = Chapter(chapter_number=count, content=chapter, novel_id=novel_id)
+                        db.session.add(chapter_data)
+                        print(f"Chapter {count} added to session")
+                        yield json.dumps({"response_count": count, "chapter": chapter}, ensure_ascii=False) + "\n"
+
+                    db.session.commit()
+                    print("All chapters committed to database")
+                    yield json.dumps({"response_count": count + 1, "fin": True}, ensure_ascii=False) + "\n"
+                except Exception as e:
+                    print(f"Error in novel_generater: {str(e)}")
+                    import traceback
+
+                    traceback.print_exc()
+                    yield json.dumps({"error": str(e)}, ensure_ascii=False) + "\n"
+
+            return Response(
+                stream_with_context(novel_generater()),
+                mimetype="application/json",
+                headers={"Content-Type": "application/json; charset=utf-8"},
+            )
         except Exception as e:
             return {"status": False, "error": str(e)}
 
