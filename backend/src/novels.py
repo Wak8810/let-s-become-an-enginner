@@ -18,7 +18,7 @@ api = Namespace("novels", description="役割はタスク分解ドキュメン�
 
 # 小説生成系を担当するクラス.
 # ai側でのエラーを処理しないので注意.
-class NovelGenerater:
+class NovelGenerator:
     def __init__(self):
         self.model = None
         self.is_generating = False
@@ -139,10 +139,10 @@ class NovelStart(Resource):
             novel_id = novel_data.id
 
             # ai-apiとのやり取り
-            novelist = NovelGenerater()
+            novelist = NovelGenerator()
             novelist.setup_ai()
 
-            # NovelGeneraterのgenerate_novelメソッドの出力に以下の処理をする.
+            # NovelGeneratorのgenerate_novelメソッドの出力に以下の処理をする.
             # - DB登録
             # - レスポンスのjsonボディに変形
             def novel_generater():
