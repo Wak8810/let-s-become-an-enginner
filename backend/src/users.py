@@ -1,0 +1,174 @@
+from flask import Blueprint, request
+from flask_restx import Namespace, Resource, fields
+
+from src.database import db
+from src.models import Novel, User
+
+users_module = Blueprint("users_module", __name__)
+api = Namespace("users", description="ユーザー関連の処理")
+
+
+# -- models --
+user_register_post_model = api.model(
+    """ユーザー登録に必要なデータ
+	"""
+    "user_register_data",
+    {"email": fields.String(description="email"), "user_name": fields.String(description="user's name")},
+)
+user_setting_model = api.model(
+    """ユーザー情報の変更に必要なデータ
+	"""
+    "user_setting_data",
+    {"email": fields.String(description="email"), "user_name": fields.String(description="user's name")},
+)
+user_item_model = api.model(
+    """ユーザーのデータベース要素
+	"""
+    "User",
+    {
+        "id": fields.String(attributes="id"),
+        "username": fields.String(),
+        "email": fields.String(),
+        "created_at": fields.Date(),
+        "updated_at": fields.Date(),
+    },
+)
+novel_item_model = api.model(
+    """ユーザー一覧用のnovelのモデル
+	"""
+    "Novel",
+    {
+        "id": fields.String(attributes="id"),
+        "title": fields.String(),
+        "genre": fields.String(),
+        "style": fields.String(),
+        "text_length": fields.Integer(),
+        "created_at": fields.Date(),
+        "updated_at": fields.Date(),
+    },
+)
+
+
+@api.route("/")
+class UserList(Resource):
+    @api.doc("post_users")
+    @api.expect(user_register_post_model)
+    def post(self):
+        """新規ユーザー登録
+
+        Returns:
+        """
+        try:
+            user_info = request.get_json()
+            new_user = User(username=user_info["user_name"], email=user_info["email"])
+            db.session.add(new_user)
+            db.session.commit()
+            print("new user registered")
+            return {"registered": True}
+        except Exception as e:
+            return {"error": str(e)}
+
+    @api.doc("get_users")
+    @api.marshal_list_with(user_item_model)
+    def get(self):
+        """全てのユーザー情報を取得する
+
+        Returns:
+            List: usersデータベースのすべての情報
+        """
+        try:
+            users = db.session.query(User).all()
+            return users
+        except Exception as e:
+            return {"error": str(e)}
+
+
+@api.route("/<string:user_id>")
+class UserItem(Resource):
+    @api.doc("get_user_id", params={"user_id": "取得対象のuser_id"})
+    @api.marshal_with(user_item_model)
+    def get(self, user_id):
+        """idからユーザー情報を返す
+
+        Args:
+            user_id (String): 取得対象のユーザーのid
+
+        Returns:
+            Dict: ユーザー情報
+        """
+        try:
+            user = User.query.get(user_id)
+            return user
+        except Exception as e:
+            return {"error": str(e)}
+
+    @api.doc("post_user_id", params={"user_id": "対象のuser_id"})
+    @api.expect(user_setting_model)
+    @api.marshal_with(user_item_model)
+    def post(self, user_id):
+        """ユーザー情報の更新
+
+        Args:
+            user_id (str)
+        Returns:
+            dict: 更新後の情報
+
+        注意:
+            変更しない項目は今の設定を入れないと消えます
+            仕様変更すべき？
+        """
+        try:
+            print(f"try to change user data - id: {user_id}")
+            new_setting = request.get_json()
+            tar_user = User.query.get(user_id)
+            if tar_user is None:
+                print("user not found")
+                return {"error": f"user not found - searched id:{user_id}"}
+            print("user found")
+            tar_user.email = new_setting["email"]
+            tar_user.username = new_setting["user_name"]
+            db.session.commit()
+            return tar_user
+        except Exception as e:
+            return {"error": str(e)}
+
+    @api.doc("delete_user_id", params={"user_id": "対象のuser_id"})
+    def delete(self, user_id):
+        """ユーザー情報の削除
+
+        Args:
+            user_id (str)
+        """
+        try:
+            print(f"try to delete user data - id: {user_id}")
+            tar_user = User.query.get(user_id)
+            if tar_user is None:
+                print("user not found")
+                return {"error": f"user not found - searched id:{user_id}"}
+            db.session.delete(tar_user)
+            db.session.commit()
+            print(f"deleted user - id:{user_id}")
+            return {"deleted": True}
+        except Exception as e:
+            return {"error": str(e)}
+
+
+@api.route("/<string:user_id>/novels")
+class UserNovelList(Resource):
+    @api.doc("get_user_id/novels", params={"user_id": "対象のuser_id"})
+    @api.marshal_list_with(novel_item_model)
+    def get(self, user_id):
+        """ユーザーidからそのユーザーのすべてのnovelを返す
+
+        Args:
+            user_id (str)
+
+        Returns:
+            List: novelのリスト
+        """
+        try:
+            novels = Novel.query.filter_by(user_id=user_id).all()
+            return novels
+        except Exception as e:
+            print(f"Er - UserNovelList - {str(e)}")
+            return {"error": str(e)}
