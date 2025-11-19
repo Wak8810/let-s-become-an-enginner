@@ -31,7 +31,7 @@ user_item_model = api.model(
     "user_item_data",
     {
         "user_id": fields.String(attribute="id"),
-        "username": fields.String(),
+        "user_name": fields.String(),
         "email": fields.String(),
         "created_at": fields.DateTime(description="作成日時"),
         "updated_at": fields.DateTime(description="更新日時"),
