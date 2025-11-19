@@ -29,7 +29,7 @@ class User(db.Model):
     novels = db.relationship("Novel", backref="author", lazy=True, cascade="all, delete-orphan")
 
     def __repr__(self):
-        return f"<User {self.username}>"
+        return f"<User {self.user_name}>"
 
 
 class Novel(db.Model):
