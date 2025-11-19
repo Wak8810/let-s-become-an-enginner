@@ -13,7 +13,7 @@ load_dotenv()
 
 # URI "/novels/" 以下を定義.
 novels_module = Blueprint("novel_module", __name__)
-api = Namespace("novels", description="役割はタスク分解ドキュメントを参照してください…")
+api = Namespace("novels", description="小説生成・管理用エンドポイント群")
 
 
 # 小説生成系を担当するクラス.
@@ -68,7 +68,7 @@ class NovelGenerator:
 
 # --- model ---
 novel_start_model = api.model(
-    "novelStart",
+    "NovelStreams",
     {
         "user_id": fields.String(description="user's id"),
         "genre": fields.String(description="novel's genre // now, only this is sent to ai -2025/11/14 3:00"),
@@ -90,8 +90,8 @@ novel_item_model = api.model(
         "updated_at": fields.DateTime(),
     },
 )
-novel_text_model = api.model(
-    "NovelTexts",
+novel_content_model = api.model(
+    "NovelContent",
     {
         "novel_id": fields.String(attribute="id"),
         "title": fields.String(),
@@ -109,9 +109,24 @@ chapter_item_model = api.model(
 )
 
 
-# "/novels/" : 小説生成の開始時のエンドポイント.
+# "/novels/" : 小説一覧取得のエンドポイント.
 @api.route("/")
-class NovelStart(Resource):
+class NovelList(Resource):
+    @api.doc("get_all_novels_for_test")
+    @api.marshal_list_with(novel_item_model)
+    def get(self):
+        """登録されている小説一覧を返す
+
+        Returns:
+            list: 登録されている小説の一覧
+        """
+        novels = db.session.query(Novel).all()
+        return novels
+
+
+# "/novels/streams" : 小説生成の開始時のエンドポイント.
+@api.route("/streams")
+class NovelStream(Resource):
     @api.doc("post_novels")
     @api.expect(novel_start_model)
     def post(self):
@@ -192,17 +207,6 @@ class NovelStart(Resource):
         except Exception as e:
             return {"status": False, "error": str(e)}
 
-    @api.doc("get_all_novels_for_test")
-    @api.marshal_list_with(novel_item_model)
-    def get(self):
-        """登録されている小説一覧を返す
-
-        Returns:
-            list: 登録されている小説の一覧
-        """
-        novels = db.session.query(Novel).all()
-        return novels
-
 
 @api.route("/<string:novel_id>")
 class NovelDetail(Resource):
@@ -244,7 +248,7 @@ class NovelChapters(Resource):
 @api.route("/<string:novel_id>/contents")
 class NovelContent(Resource):
     @api.doc("get_novel_text", params={"novel_id": "小説のID"})
-    @api.marshal_with(novel_text_model)
+    @api.marshal_with(novel_content_model)
     def get(self, novel_id):
         """指定された小説の全チャプターの内容を結合して返す
 
