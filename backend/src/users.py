@@ -3,6 +3,7 @@ from flask_restx import Namespace, Resource, fields
 
 from src.database import db
 from src.models import Novel, User
+from src.novels import novel_item_model
 
 users_module = Blueprint("users_module", __name__)
 api = Namespace("users", description="ユーザー関連の処理")
@@ -35,20 +36,6 @@ user_item_model = api.model(
         "email": fields.String(),
         "created_at": fields.DateTime(description="作成日時"),
         "updated_at": fields.DateTime(description="更新日時"),
-    },
-)
-novel_item_model = api.model(
-    """ユーザー一覧用のnovelのモデル
-	"""
-    "Novel",
-    {
-        "id": fields.String(attributes="id"),
-        "title": fields.String(),
-        "genre": fields.String(),
-        "style": fields.String(),
-        "text_length": fields.Integer(),
-        "created_at": fields.Date(),
-        "updated_at": fields.Date(),
     },
 )
 
@@ -179,16 +166,17 @@ class UserNovelList(Resource):
     @api.doc("get_user_id/novels", params={"user_id": "対象のuser_id"})
     @api.marshal_list_with(novel_item_model)
     def get(self, user_id):
-        """ユーザーidからそのユーザーのすべてのnovelを返す
+        """指定されたuser_idに対応するユーザの小説一覧を返す
 
         Args:
-            user_id (str)
+            user_id (str): 対象のuser_id
 
         Returns:
-            List: novelのリスト
+            List: ユーザの小説のリスト
         """
         try:
-            novels = Novel.query.filter_by(user_id=user_id).all()
+            # データベースからuser_idに対応するデータを取得
+            novels = db.session.query(Novel).filter_by(user_id=user_id).all()
             return novels
         except Exception as e:
             print(f"Er - UserNovelList - {str(e)}")
