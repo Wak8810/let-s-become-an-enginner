@@ -28,13 +28,13 @@ user_setting_model = api.model(
 user_item_model = api.model(
     """ユーザーのデータベース要素
 	"""
-    "User",
+    "user_item_data",
     {
-        "id": fields.String(attributes="id"),
+        "user_id": fields.String(attribute="id"),
         "username": fields.String(),
         "email": fields.String(),
-        "created_at": fields.Date(),
-        "updated_at": fields.Date(),
+        "created_at": fields.DateTime(description="作成日時"),
+        "updated_at": fields.DateTime(description="更新日時"),
     },
 )
 novel_item_model = api.model(
@@ -78,7 +78,7 @@ class UserList(Resource):
         """全てのユーザー情報を取得する
 
         Returns:
-            List: usersデータベースのすべての情報
+            List[Dict]: ユーザ情報（ユーザID、ユーザ名、メールアドレス、作成日時、更新日時）の配列
         """
         try:
             users = db.session.query(User).all()
