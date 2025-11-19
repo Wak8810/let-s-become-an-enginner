@@ -13,7 +13,7 @@ load_dotenv()
 
 # URI "/novels/" 以下を定義.
 novels_module = Blueprint("novel_module", __name__)
-api = Namespace("novels", description="役割はタスク分解ドキュメントを参照してください…")
+api = Namespace("novels", description="小説生成・管理用エンドポイント群")
 
 
 # 小説生成系を担当するクラス.
