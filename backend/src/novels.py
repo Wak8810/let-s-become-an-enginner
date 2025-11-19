@@ -200,11 +200,8 @@ class NovelStart(Resource):
         Returns:
             list: 登録されている小説の一覧
         """
-        try:
-            novels = db.session.query(Novel).all()
-            return novels
-        except Exception as e:
-            return {"error": str(e)}
+        novels = db.session.query(Novel).all()
+        return novels
 
 
 @api.route("/<string:novel_id>")
@@ -220,13 +217,10 @@ class NovelDetail(Resource):
         Returns:
             Dict: 指定された小説の詳細情報
         """
-        try:
-            novel = db.session.get(Novel, novel_id)
-            if not novel:
-                api.abort(404, f"Novel {novel_id} not found")
-            return novel
-        except Exception as e:
-            return {"error": str(e)}
+        novel = db.session.get(Novel, novel_id)
+        if not novel:
+            api.abort(404, f"Novel {novel_id} not found")
+        return novel
 
 
 @api.route("/<string:novel_id>/chapters")
@@ -242,11 +236,9 @@ class NovelChapters(Resource):
         Returns:
             list: 指定された小説の全チャプター一覧
         """
-        try:
-            chapters = db.session.query(Chapter).filter_by(novel_id=novel_id).order_by(Chapter.chapter_number).all()
-            return chapters
-        except Exception as e:
-            return {"error": str(e)}
+        # データベースからnovel_idに対応するデータを取得
+        chapters = db.session.query(Chapter).filter_by(novel_id=novel_id).order_by(Chapter.chapter_number).all()
+        return chapters
 
 
 @api.route("/<string:novel_id>/contents")
@@ -262,20 +254,15 @@ class NovelContent(Resource):
         Returns:
             dict: 小説のID、タイトル、結合されたテキスト内容
         """
-        try:
-            novel = db.session.get(Novel, novel_id)
-            if not novel:
-                api.abort(404, f"Novel {novel_id} not found")
+        novel = db.session.get(Novel, novel_id)
+        if not novel:
+            api.abort(404, f"Novel {novel_id} not found")
 
-            chapters = db.session.query(Chapter).filter_by(novel_id=novel_id).order_by(Chapter.chapter_number).all()
-            full_text = "\n\n".join([chapter.content for chapter in chapters])
-            print(novel.id)
+        chapters = db.session.query(Chapter).filter_by(novel_id=novel_id).order_by(Chapter.chapter_number).all()
+        full_text = "\n\n".join([chapter.content for chapter in chapters])
 
-            return {
-                "id": novel.id,
-                "title": novel.title,
-                "text": full_text,
-            }
-
-        except Exception as e:
-            return {"error": str(e)}
+        return {
+            "id": novel.id,
+            "title": novel.title,
+            "text": full_text,
+        }
