@@ -149,21 +149,27 @@ class UserItem(Resource):
 
     @api.doc("delete_user_id", params={"user_id": "対象のuser_id"})
     def delete(self, user_id):
-        """ユーザー情報の削除
+        """指定されたuser_idに対応するユーザ情報を削除
 
         Args:
-            user_id (str)
+            user_id (str): 削除対象のuser_id
+        Returns:
+            dict: 削除結果のメッセージ
         """
         try:
             print(f"try to delete user data - id: {user_id}")
-            tar_user = User.query.get(user_id)
-            if tar_user is None:
+            # データベースからuser_idに対応するデータを取得
+            user_data = User.query.get(user_id)
+            if not user_data:
                 print("user not found")
-                return {"error": f"user not found - searched id:{user_id}"}
-            db.session.delete(tar_user)
+                return {"error": f"user not found - searched id:{user_id}"}, 404
+
+            # データベースからデータを削除
+            db.session.delete(user_data)
             db.session.commit()
             print(f"deleted user - id:{user_id}")
-            return {"deleted": True}
+
+            return {"message": f"User with id {user_id} has been deleted."}
         except Exception as e:
             return {"error": str(e)}
 
