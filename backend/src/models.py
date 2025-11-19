@@ -20,8 +20,8 @@ class User(db.Model):
     __tablename__ = "users"
 
     id = db.Column(db.String(32), primary_key=True, default=lambda: uuid4().hex)
-    username = db.Column(db.String(80))
-    email = db.Column(db.String(120))
+    user_name = db.Column(db.String(80), nullable=True)
+    email = db.Column(db.String(120), nullable=True)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.now)
     updated_at = db.Column(db.DateTime, nullable=False, default=datetime.now, onupdate=datetime.now)
 
@@ -29,7 +29,7 @@ class User(db.Model):
     novels = db.relationship("Novel", backref="author", lazy=True, cascade="all, delete-orphan")
 
     def __repr__(self):
-        return f"<User {self.username}>"
+        return f"<User {self.user_name}>"
 
 
 class Novel(db.Model):

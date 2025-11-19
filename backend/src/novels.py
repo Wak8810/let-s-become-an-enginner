@@ -7,7 +7,7 @@ from flask_restx import Namespace, Resource, fields
 from google import generativeai as genai
 
 from src.database import db
-from src.models import Chapter, Novel
+from src.models import Chapter, Novel, User
 
 load_dotenv()
 
@@ -70,6 +70,7 @@ class NovelGenerator:
 novel_start_model = api.model(
     "novelStart",
     {
+        "user_id": fields.String(description="user's id"),
         "genre": fields.String(description="novel's genre // now, only this is sent to ai -2025/11/14 3:00"),
         "textLen": fields.Integer(required=True, description="required novel's length"),
         "style": fields.String(description="novel's style"),
@@ -81,6 +82,10 @@ novel_item_model = api.model(
         "novel_id": fields.String(attribute="id"),
         "title": fields.String(),
         "overall_plot": fields.String(),
+        "genre": fields.String(),
+        "style": fields.String(),
+        "text_length": fields.Integer(),
+        "user_id": fields.String(),
         "created_at": fields.DateTime(),
         "updated_at": fields.DateTime(),
     },
@@ -110,32 +115,28 @@ class NovelStart(Resource):
         try:
             # リクエストボディの解凍.
             requested_param = request.get_json()
+            user_id = requested_param.get("user_id")
             genre = requested_param.get("genre")
             text_length = requested_param.get("textLen")
             style = requested_param.get("style")
 
-            # db - まずテストユーザーを作成または取得
-            from src.models import User
+            # データベースからuser_idに対応するデータを取得
+            user_data = db.session.query(User).filter_by(id=user_id).first()
+            if not user_data:
+                return {"error": f"User {user_id} not found"}, 404
 
-            test_user = db.session.query(User).filter_by(username="test_user").first()
-            if not test_user:
-                test_user = User(username="test_user", email="test@example.com")
-                db.session.add(test_user)
-                db.session.commit()
-
+            # データベースに新たな小説データを登録
             novel_data = Novel(
                 style=style,
                 genre=genre,
                 text_length=text_length,
-                title="test",  # debug
-                overall_plot="",  # debug
-                user_id=test_user.id,
+                title="test",  # TODO: タイトル生成機能実装時に更新
+                overall_plot="",  # TODO: プロット生成後に更新
+                user_id=user_data.id,
             )
             db.session.add(novel_data)
             db.session.commit()
-            print(
-                db.session.query(Novel.created_at).filter_by(id=novel_data.id).order_by(Novel.created_at.desc()).first()
-            )
+
             # 小説IDを保存（ジェネレータ内でも安全に使用可能）
             novel_id = novel_data.id
 

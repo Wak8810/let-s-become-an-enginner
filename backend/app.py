@@ -6,6 +6,8 @@ from src.novels import api as novels_api
 from src.novels import novels_module
 from src.tests import api as test_api
 from src.tests import test_module
+from src.users import api as user_api
+from src.users import users_module
 
 app = Flask(__name__)
 
@@ -22,6 +24,10 @@ api.add_namespace(test_api, path="/tests")
 # /novels以下の登録.
 app.register_blueprint(novels_module)
 api.add_namespace(novels_api, path="/novels")
+
+# /users以下.
+app.register_blueprint(users_module)
+api.add_namespace(user_api, path="/users")
 
 
 @api.route("/hello")
