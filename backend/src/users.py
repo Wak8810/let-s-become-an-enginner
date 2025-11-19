@@ -9,11 +9,15 @@ api = Namespace("users", description="ユーザー関連の処理")
 
 
 # -- models --
-user_register_post_model = api.model(
-    """ユーザー登録に必要なデータ
+user_registration_model = api.model(
+    """ユーザーの新規登録内容
 	"""
-    "user_register_data",
-    {"email": fields.String(description="email"), "user_name": fields.String(description="user's name")},
+    "user_registration_data",
+    {
+        "user_id": fields.String(attribute="id"),
+        "created_at": fields.DateTime(description="作成日時"),
+        "updated_at": fields.DateTime(description="更新日時"),
+    },
 )
 user_setting_model = api.model(
     """ユーザー情報の変更に必要なデータ
@@ -52,19 +56,19 @@ novel_item_model = api.model(
 @api.route("/")
 class UserList(Resource):
     @api.doc("post_users")
-    @api.expect(user_register_post_model)
+    @api.marshal_with(user_registration_model)
     def post(self):
-        """新規ユーザー登録
+        """新規にユーザIDを発行してデータベースに登録する
 
         Returns:
+            Dict: 登録したユーザID、作成日時、更新日時
         """
         try:
-            user_info = request.get_json()
-            new_user = User(username=user_info["user_name"], email=user_info["email"])
+            new_user = User()
             db.session.add(new_user)
             db.session.commit()
             print("new user registered")
-            return {"registered": True}
+            return new_user
         except Exception as e:
             return {"error": str(e)}
 
