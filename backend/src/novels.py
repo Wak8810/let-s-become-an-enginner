@@ -90,6 +90,14 @@ novel_item_model = api.model(
         "updated_at": fields.DateTime(),
     },
 )
+novel_text_model = api.model(
+    "NovelTexts",
+    {
+        "novel_id": fields.String(attribute="id"),
+        "title": fields.String(),
+        "text": fields.String(),
+    },
+)
 chapter_item_model = api.model(
     "ChapterListItem",
     {
@@ -184,21 +192,77 @@ class NovelStart(Resource):
         except Exception as e:
             return {"status": False, "error": str(e)}
 
-    @api.doc("get_novels")
+    @api.doc("get_all_novels_for_test")
+    @api.marshal_list_with(novel_item_model)
     def get(self):
-        """novelsとchaptersのデータベースの数を返す
+        """登録されている小説一覧を返す
 
         Returns:
-            n:count of novels
-            c:count of chapters
+            list: 登録されている小説の一覧
         """
-        try:
-            n = 0
-            c = 0
-            novels = db.session.query(Novel).all()
-            chapters = db.session.query(Chapter).all()
-            n = len(novels)
-            c = len(chapters)
-            return {"n": n, "c": c}
-        except Exception as e:
-            return {"error": str(e), "n": n, "c": c}
+        novels = db.session.query(Novel).all()
+        return novels
+
+
+@api.route("/<string:novel_id>")
+class NovelDetail(Resource):
+    @api.doc("get_novel_detail", params={"novel_id": "詳細情報を取得したい小説のID"})
+    @api.marshal_with(novel_item_model)
+    def get(self, novel_id):
+        """指定された小説の詳細情報を返す
+
+        Args:
+            novel_id (str): 小説のID
+
+        Returns:
+            Dict: 指定された小説の詳細情報
+        """
+        novel = db.session.get(Novel, novel_id)
+        if not novel:
+            api.abort(404, f"Novel {novel_id} not found")
+        return novel
+
+
+@api.route("/<string:novel_id>/chapters")
+class NovelChapters(Resource):
+    @api.doc("get_novel_chapters", params={"novel_id": "小説のID"})
+    @api.marshal_list_with(chapter_item_model)
+    def get(self, novel_id):
+        """指定された小説の全チャプター一覧を返す
+
+        Args:
+            novel_id (str): 小説のID
+
+        Returns:
+            list: 指定された小説の全チャプター一覧
+        """
+        # データベースからnovel_idに対応するデータを取得
+        chapters = db.session.query(Chapter).filter_by(novel_id=novel_id).order_by(Chapter.chapter_number).all()
+        return chapters
+
+
+@api.route("/<string:novel_id>/contents")
+class NovelContent(Resource):
+    @api.doc("get_novel_text", params={"novel_id": "小説のID"})
+    @api.marshal_with(novel_text_model)
+    def get(self, novel_id):
+        """指定された小説の全チャプターの内容を結合して返す
+
+        Args:
+            novel_id (str): 小説のID
+
+        Returns:
+            dict: 小説のID、タイトル、結合されたテキスト内容
+        """
+        novel = db.session.get(Novel, novel_id)
+        if not novel:
+            api.abort(404, f"Novel {novel_id} not found")
+
+        chapters = db.session.query(Chapter).filter_by(novel_id=novel_id).order_by(Chapter.chapter_number).all()
+        full_text = "\n\n".join([chapter.content for chapter in chapters])
+
+        return {
+            "id": novel.id,
+            "title": novel.title,
+            "text": full_text,
+        }
