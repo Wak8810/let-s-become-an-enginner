@@ -109,30 +109,41 @@ class UserItem(Resource):
     @api.doc("post_user_id", params={"user_id": "対象のuser_id"})
     @api.expect(user_setting_model)
     @api.marshal_with(user_item_model)
-    def post(self, user_id):
-        """ユーザー情報の更新
+    def put(self, user_id):
+        """ユーザ情報の更新
 
         Args:
             user_id (str)
         Returns:
-            dict: 更新後の情報
-
-        注意:
-            変更しない項目は今の設定を入れないと消えます
-            仕様変更すべき？
+            dict: 更新後のユーザ情報（ユーザID、ユーザ名、メールアドレス、作成日時、更新日時）
         """
+        request_body = request.get_json()
         try:
             print(f"try to change user data - id: {user_id}")
-            new_setting = request.get_json()
-            tar_user = User.query.get(user_id)
-            if tar_user is None:
+
+            # データベースからuser_idに対応するデータを取得
+            user_data = db.session.query(User).filter_by(id=user_id).first()
+            if not user_data:
                 print("user not found")
-                return {"error": f"user not found - searched id:{user_id}"}
-            print("user found")
-            tar_user.email = new_setting["email"]
-            tar_user.username = new_setting["user_name"]
+                return {"error": f"user not found - searched id:{user_id}"}, 404
+
+            # リクエストボディから値を取得
+            user_name = request_body.get("user_name")
+            email = request_body.get("email")
+
+            # 少なくとも一つの値が空でないかチェック
+            if not user_name and not email:
+                return {"error": "user_name または email の少なくとも一つは空でない値を指定してください"}, 400
+
+            # 空でない値でデータベースを更新
+            if user_name:
+                user_data.user_name = user_name
+            if email:
+                user_data.email = email
+
             db.session.commit()
-            return tar_user
+
+            return user_data
         except Exception as e:
             return {"error": str(e)}
 
