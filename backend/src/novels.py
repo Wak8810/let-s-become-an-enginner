@@ -27,12 +27,16 @@ class NovelGenerator:
 
     def setup_ai(self):
         genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-        self.model = genai.GenerativeModel("gemini-2.0-flash")
+        model_version = os.getenv("GEMINI_MODEL", "2.0-flash")
+        if model_version not in ["2.0-flash", "2.5-flash"]:
+            raise ValueError(f"Invalid GEMINI_MODEL: {model_version}. Must be '2.0-flash' or '2.5-flash'.")
+        self.model = genai.GenerativeModel(f"gemini-{model_version}")
 
     # プロット生成.
     def generate_plot(self, genre, text_length):
         return self.model.generate_content(
-            f"{genre}の小説のプロットを具体的に作成してください。小説は{text_length}文字程度になります。"
+            f"{genre}の小説のプロットを具体的に作成してください。小説は{text_length}文字程度になります。",
+            request_options={"timeout": 600},
         ).text
 
     # チャプター生成.
@@ -41,7 +45,8 @@ class NovelGenerator:
             f"""{plot}の小説の第{chapter_num}章を、以下の情報を参考に生成してください。
             {f"- 文体:{style}" if isinstance(style, str) else ""}
             {f"下記は前の章です:\n{previous_chapter}" if previous_chapter else ""}
-            """
+            """,
+            request_options={"timeout": 600},
         ).text
 
     # 小説生成のジェネレーター.
