@@ -22,8 +22,6 @@ class NovelGenerator:
     def __init__(self):
         self.model = None
         self.is_generating = False
-        self.novel_db = None
-        self.chapter_db = None
 
     def setup_ai(self):
         genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
@@ -31,6 +29,10 @@ class NovelGenerator:
         if model_version not in ["2.0-flash", "2.5-flash"]:
             raise ValueError(f"Invalid GEMINI_MODEL: {model_version}. Must be '2.0-flash' or '2.5-flash'.")
         self.model = genai.GenerativeModel(f"gemini-{model_version}")
+
+    def calc_chapter_count(self, text_length):
+        # 1000文字あたり1チャプターで計算(仮) - debug
+        return int((text_length - 1) / 1000) + 1
 
     # プロット生成.
     def generate_plot(self, genre, text_length):
@@ -69,6 +71,55 @@ class NovelGenerator:
                 return
             previous_chapter = chapter
             count += 1
+
+
+class Novelist:
+    """NovelGeneratorを使いやすくするためのラッパ"""
+
+    def __init__(self):
+        self.generator = NovelGenerator()
+        self.generator.setup_ai()
+        self.plot = ""
+        self.previous_chapter_content = ""
+        self.next_chapter_num = 1
+        self.chapter_count = 0
+        self.total_text_length = 0
+        self.target_text_length = 0
+        self.genre = ""
+        self.style = ""
+
+    def set_first_params(self, text_length, genre, style):
+        """小説生成のためのパラメータを設定する
+
+        Args:
+            text_length (int): text_length
+            genre (string): genre
+            style (string): style
+        """
+        self.genre = genre
+        self.target_text_length = text_length
+        self.style = style
+
+    def prepare_novel(self):
+        """plotと章の数を準備"""
+        self.plot = self.generator.generate_plot(self.genre, self.target_text_length)
+        self.chapter_count = self.generator.calc_chapter_count(self.target_text_length)
+
+    def write_next_chapter(self):
+        """チャプターを一つ生成
+
+        Returns:
+            string: chapter content
+        """
+        self.previous_chapter_content = self.generator.generate_chapter(
+            self.plot,
+            self.style,
+            previous_chapter=self.previous_chapter_content if self.next_chapter_num != 1 else None,
+            chapter_num=self.next_chapter_num,
+        )
+        self.next_chapter_num += 1
+        self.total_text_length += len(self.previous_chapter_content)
+        return self.previous_chapter_content
 
 
 # --- model ---
@@ -275,3 +326,58 @@ class NovelContent(Resource):
             "title": novel.title,
             "text": full_text,
         }
+
+
+@api.route("/init")
+class NovelInit(Resource):
+    @api.doc("post_init")
+    @api.expect(novel_start_model)
+    def post(self):
+        try:
+            requested_param = request.get_json()
+            user_id = requested_param.get("user_id")
+            genre = requested_param.get("genre")
+            text_length = requested_param.get("textLen")
+            style = requested_param.get("style")
+
+            user_data = db.session.query(User).filter_by(id=user_id).first()
+            if not user_data:
+                return {"error": f"user not found - user_id: {user_id}"}, 404
+
+            # Novelのデータベース登録.
+            novel_data = Novel(
+                style=style,
+                genre=genre,
+                text_length=text_length,
+                title="test",  # TODO: タイトル生成機能実装時に更新
+                overall_plot="",  # TODO: プロット生成後に更新
+                user_id=user_data.id,
+            )
+            db.session.add(novel_data)
+            db.session.commit()
+
+            # Novelist準備.
+            novelist = Novelist()
+            novelist.set_first_params(text_length, genre, style)
+            novelist.prepare_novel()
+
+            # 章のデータベースを作成する.
+            for i in range(novelist.chapter_count):
+                chapter = Chapter(chapter_number=i + 1, content="NO CONTENT", novel_id=novel_data.id)
+                db.session.add(chapter)
+            db.session.commit()
+
+            # plotのデータベース更新.
+            novel_data.overall_plot = novelist.plot
+            db.session.commit()
+
+            # とりあえず一章のみ生成して返す. -test
+            first_chapter = db.session.query(Chapter).filter_by(novel_id=novel_data.id, chapter_number=1).first()
+            chapter = novelist.write_next_chapter()
+            first_chapter.content = chapter
+            db.session.commit()
+
+            return {"content": chapter, "novel_id": str(novel_data.id)}, 200
+
+        except Exception as e:
+            return {"error": str(e)}, 500
