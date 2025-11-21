@@ -51,6 +51,10 @@ class Novel(db.Model):
     user_id = db.Column(db.String(32), db.ForeignKey("users.id"), nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.now)
     updated_at = db.Column(db.DateTime, nullable=False, default=datetime.now, onupdate=datetime.now)
+    # addition 11/22
+    # short_summary=db.Column(db.Text,nullable=False)
+    true_text_length = db.Column(db.Integer, nullable=True)
+    status_id = db.Column(db.String(32), nullable=False)  # TODO:ステータスのFKにする.
 
     # リレーション: 小説は複数のチャプターを持つ
     chapters = db.relationship("Chapter", backref="novel", lazy=True, cascade="all, delete-orphan")
@@ -74,9 +78,41 @@ class Chapter(db.Model):
     novel_id = db.Column(db.String(32), db.ForeignKey("novels.id"), nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.now)
     updated_at = db.Column(db.DateTime, nullable=False, default=datetime.now, onupdate=datetime.now)
+    # addition 11/22
+    status_id = db.Column(db.String(32), nullable=False)  # TODO:ステータスのFKにする.
 
     def __repr__(self):
         return f"<Chapter {self.chapter_number} of Novel {self.novel_id}>"
+
+
+class Genres(db.Model):
+    """ジャンルテーブル
+
+    ジャンルの情報を管理.
+    """
+
+    __tablename__ = "genres"
+
+    id = db.Column(db.String(32), primary_key=True, default=lambda: uuid4().hex)
+    genre = db.Column(db.String(32), nullable=False)
+
+    def __repr__(self):
+        return f"<Genre id : {self.id} , genre : {self.genre}>"
+
+
+class Statuses(db.Model):
+    """ステータステーブル
+
+    ステータスの情報を管理.
+    """
+
+    __tablename__ = "statuses"
+
+    id = db.Column(db.String(32), primary_key=True, default=lambda: uuid4().hex)
+    status = db.Column(db.String(32), nullable=False)
+
+    def __repr__(self):
+        return f"<Statuses id : {self.id} , status : {self.status}>"
 
 
 class Test(db.Model):
