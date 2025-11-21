@@ -52,7 +52,7 @@ class Novel(db.Model):
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.now)
     updated_at = db.Column(db.DateTime, nullable=False, default=datetime.now, onupdate=datetime.now)
     # addition 11/22
-    # short_summary=db.Column(db.Text,nullable=False)
+    short_summary=db.Column(db.Text,nullable=False)
     true_text_length = db.Column(db.Integer, nullable=True)
     status_id = db.Column(db.String(32), nullable=False)  # TODO:ステータスのFKにする.
 
@@ -80,6 +80,7 @@ class Chapter(db.Model):
     updated_at = db.Column(db.DateTime, nullable=False, default=datetime.now, onupdate=datetime.now)
     # addition 11/22
     status_id = db.Column(db.String(32), nullable=False)  # TODO:ステータスのFKにする.
+    plot=db.Column(db.Text, nullable=False)
 
     def __repr__(self):
         return f"<Chapter {self.chapter_number} of Novel {self.novel_id}>"

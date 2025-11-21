@@ -45,7 +45,7 @@ class NovelGenerator:
             出力は以下のjson形式で行ってください、その他は一切出力してはいけません。:
             {{
                 "title":(novel's title),
-                "summary":(novel's summary),
+                "summary":(summary),
                 "plot":(plot),
                 "characters":[
                     {{
@@ -407,25 +407,34 @@ class NovelInit(Resource):
             if not user_data:
                 return {"error": f"user not found - user_id: {user_id}"}, 404
             # Novelist準備.
-            print("starting setup novelist")
+            print("starting novelist setup")
             novelist = Novelist()
             novelist.set_first_params(text_length, novel_other_settings)
             novelist.prepare_novel()
-            print("novelist setup finished")
+            print("finished novelist setup")
             # Novelのデータベース登録.
             novel_data = Novel(
                 style=novelist.other_settings.get("style"),
-                genre=novelist.other_settings.get("genre"),
+                genre=novelist.other_settings.get("genre"),  # TODO:ジャンルのデータベースとの関連付け.
                 text_length=text_length,
                 title=novelist.other_novel_data.get("title", "untitled"),
                 overall_plot=novelist.plot,
+                short_summary=novelist.other_novel_data.get("summary", ""),
                 user_id=user_data.id,
+                status_id=0,  # TODO:ちゃんとステータスのデータベースから持ってくる.
+                true_text_length=0,
             )
             db.session.add(novel_data)
             db.session.commit()
             # 章のデータベースを作成する.
             for i in range(novelist.chapter_count):
-                chapter = Chapter(chapter_number=i + 1, content="NO CONTENT", novel_id=novel_data.id)
+                chapter = Chapter(
+                    chapter_number=i + 1,
+                    content="NO CONTENT",
+                    novel_id=novel_data.id,
+                    status_id=0,  # TODO:ちゃんとステータスのデータベースから持ってくる.
+                    plot=novelist.chapter_plots[i].get("plot"),
+                )
                 db.session.add(chapter)
             db.session.commit()
             # とりあえず一章のみ生成して返す. -test
