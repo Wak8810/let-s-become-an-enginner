@@ -8,6 +8,7 @@ from google import generativeai as genai
 
 from src.database import db
 from src.models import Chapter, Novel, User
+from src.status import get_status_id
 
 load_dotenv()
 
@@ -421,7 +422,7 @@ class NovelInit(Resource):
                 overall_plot=novelist.plot,
                 short_summary=novelist.other_novel_data.get("summary", ""),
                 user_id=user_data.id,
-                status_id=0,  # TODO:ちゃんとステータスのデータベースから持ってくる.
+                status_id=get_status_id("PENDING"),
                 true_text_length=0,
             )
             db.session.add(novel_data)
@@ -432,7 +433,7 @@ class NovelInit(Resource):
                     chapter_number=i + 1,
                     content="NO CONTENT",
                     novel_id=novel_data.id,
-                    status_id=0,  # TODO:ちゃんとステータスのデータベースから持ってくる.
+                    status_id=get_status_id("PENDING"),
                     plot=novelist.chapter_plots[i].get("plot"),
                 )
                 db.session.add(chapter)
