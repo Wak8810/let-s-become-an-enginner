@@ -54,7 +54,7 @@ class Novel(db.Model):
     # addition 11/22
     short_summary=db.Column(db.Text,nullable=False)
     true_text_length = db.Column(db.Integer, nullable=True)
-    status_id = db.Column(db.String(32), nullable=False)  # TODO:ステータスのFKにする.
+    status_id = db.Column(db.String(32), db.ForeignKey("statuses.id"), nullable=False)
 
     # リレーション: 小説は複数のチャプターを持つ
     chapters = db.relationship("Chapter", backref="novel", lazy=True, cascade="all, delete-orphan")
@@ -79,7 +79,7 @@ class Chapter(db.Model):
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.now)
     updated_at = db.Column(db.DateTime, nullable=False, default=datetime.now, onupdate=datetime.now)
     # addition 11/22
-    status_id = db.Column(db.String(32), nullable=False)  # TODO:ステータスのFKにする.
+    status_id = db.Column(db.String(32), db.ForeignKey("statuses.id"), nullable=False)
     plot=db.Column(db.Text, nullable=False)
 
     def __repr__(self):

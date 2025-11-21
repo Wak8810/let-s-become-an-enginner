@@ -125,6 +125,13 @@ class Novelist:
         self.other_settings = {}
         self.other_novel_data = {}
 
+    # debug
+    def log(self, log):
+        file = open("novelist.log", "a")
+        file.write(log)
+        file.write("\n")
+        file.close()
+
     def calc_chapter_count(self, text_length):
         # 4000未満->1 , 4000以上->textLen/2000
         return 1 if text_length < 4000 else int(text_length / 2000)
@@ -145,10 +152,10 @@ class Novelist:
     def prepare_novel(self):
         """plotと章の数を準備"""
         self.chapter_count = self.calc_chapter_count(self.target_text_length)
-        generated = self.generator.generate_init(self.target_text_length, self.chapter_count, self.other_settings)
-        self.init_data = generated
-        print(generated)
-        generated = json.loads(generated)
+        raw = self.generator.generate_init(self.target_text_length, self.chapter_count, self.other_settings)
+        self.init_data = raw
+        self.log(raw)
+        generated = json.loads(raw)
         self.plot = generated.get("plot", "")
         self.chapter_plots = generated.get("chapter_plots", [])
         self.other_novel_data = {k: v for k, v in generated.items() if k not in ["plot", "chapter_plots"]}
@@ -422,11 +429,12 @@ class NovelInit(Resource):
                 overall_plot=novelist.plot,
                 short_summary=novelist.other_novel_data.get("summary", ""),
                 user_id=user_data.id,
-                status_id=get_status_id("PENDING"),
+                status_id=get_status_id("GENERATING"),
                 true_text_length=0,
             )
             db.session.add(novel_data)
             db.session.commit()
+            print("new novel was registered to db")
             # 章のデータベースを作成する.
             for i in range(novelist.chapter_count):
                 chapter = Chapter(
@@ -438,10 +446,18 @@ class NovelInit(Resource):
                 )
                 db.session.add(chapter)
             db.session.commit()
-            # とりあえず一章のみ生成して返す. -test
+            print(f"{novelist.chapter_count} chapters was registered to db")
+            # 1章の生成開始をデータベースに記録.
             first_chapter = db.session.query(Chapter).filter_by(novel_id=novel_data.id, chapter_number=1).first()
+            first_chapter.status_id = get_status_id("GENERATING")
+            db.session.commit()
+            # 1章生成.
+            print("start to generate chapter")
             chapter = novelist.write_next_chapter()
+            print("finished generating chapter")
+            # データベース記録.
             first_chapter.content = chapter
+            first_chapter.status_id = get_status_id("COMPLETED")
             db.session.commit()
 
             return {
