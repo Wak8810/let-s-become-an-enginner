@@ -127,9 +127,17 @@ class Novelist:
 
     # debug
     def log(self, log):
+        """logの記録 - debug
+
+        Args:
+            log (str or list(str)): log
+        """
         file = open("novelist.log", "a")
-        file.write(log)
-        file.write("\n")
+        if isinstance(log, str):
+            file.write(log)
+        else:
+            for text in log:
+                file.write(text)
         file.close()
 
     def calc_chapter_count(self, text_length):
@@ -154,7 +162,7 @@ class Novelist:
         self.chapter_count = self.calc_chapter_count(self.target_text_length)
         raw = self.generator.generate_init(self.target_text_length, self.chapter_count, self.other_settings)
         self.init_data = raw
-        self.log(raw)
+        self.log(["generated initial data :\n", raw, "\n"])
         generated = json.loads(raw)
         self.plot = generated.get("plot", "")
         self.chapter_plots = generated.get("chapter_plots", [])
@@ -174,6 +182,17 @@ class Novelist:
         )
         self.next_chapter_num += 1
         self.total_text_length += len(self.previous_chapter_content)
+        self.log(
+            [
+                "generated chapter - next:",
+                str(self.next_chapter_num),
+                ", total text: ",
+                str(self.total_text_length),
+                ", chapter:\n",
+                self.previous_chapter_content,
+                "\n",
+            ]
+        )
         return self.previous_chapter_content
 
 
