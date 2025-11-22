@@ -1,5 +1,6 @@
 import json
 import os
+import threading
 
 from dotenv import load_dotenv
 from flask import Blueprint, Response, request, stream_with_context
@@ -8,6 +9,7 @@ from google import generativeai as genai
 
 from src.database import db
 from src.models import Chapter, Novel, User
+from src.status import get_status_id
 
 load_dotenv()
 
@@ -22,8 +24,6 @@ class NovelGenerator:
     def __init__(self):
         self.model = None
         self.is_generating = False
-        self.novel_db = None
-        self.chapter_db = None
 
     def setup_ai(self):
         genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
@@ -38,6 +38,39 @@ class NovelGenerator:
             f"{genre}の小説のプロットを具体的に作成してください。小説は{text_length}文字程度になります。",
             request_options={"timeout": 600},
         ).text
+
+    # 小説の初期データを生成して返す jsonテキストを返す努力をする.
+    def generate_init(self, text_length, chapter_count, other):
+        ret_text = self.model.generate_content(
+            f"""下記の内容の小説を作成するのに、設定やプロット、登場人物等を具体的に作成してください。小説は全体で{text_length}文字程度、章は{chapter_count}です。
+            {json.dumps(other)}
+            出力は以下のjson形式で行ってください、その他は一切出力してはいけません。:
+            {{
+                "title":(novel's title),
+                "summary":(summary),
+                "plot":(plot),
+                "characters":[
+                    {{
+                        "name":(name),
+                        "role":(role)
+                    }},
+                    (generate characters you needed)
+                ],
+                "chapter_plots":[
+                    {{
+                        "plot":(plot)
+                    }},
+                    (generate same number of items as chapters)
+                ]
+            }}
+            """,
+            request_options={"timeout": 600},
+        ).text.replace("\n", "")
+        json_start = ret_text.find("{")
+        ret_text = ret_text[json_start:]
+        json_end = ret_text.rfind("}")
+        ret_text = ret_text[: json_end + 1]
+        return ret_text
 
     # チャプター生成.
     def generate_chapter(self, plot, style, previous_chapter=None, chapter_num=0):
@@ -71,6 +104,140 @@ class NovelGenerator:
             count += 1
 
 
+class Novelist:
+    """NovelGeneratorを使いやすくするためのラッパ"""
+
+    def __init__(self):
+        # generator
+        self.generator = NovelGenerator()
+        self.generator.setup_ai()
+        # plot
+        self.plot = ""
+        self.chapter_plots = []
+        self.init_data = ""
+        # chapter
+        self.previous_chapter_content = ""
+        self.next_chapter_num = 1
+        self.chapter_count = 0
+        # text length
+        self.total_text_length = 0
+        self.target_text_length = 0
+        # other その他はディクショナリ.
+        self.other_settings = {}
+        self.other_novel_data = {}
+
+    # debug
+    def log(self, log):
+        """logの記録 - debug
+
+        Args:
+            log (str or list(str)): log
+        """
+        file = open("novelist.log", "a")
+        if isinstance(log, str):
+            file.write(log)
+        else:
+            for text in log:
+                file.write(text)
+        file.close()
+
+    def calc_chapter_count(self, text_length):
+        # 4000未満->1 , 4000以上->textLen/2000
+        return 1 if text_length < 4000 else int(text_length / 2000)
+
+    def set_first_params(self, text_length, others={}):
+        """小説生成のためのパラメータを設定する
+
+        Args:
+            text_length (int): text_length
+            others (dict): other settings
+        """
+        self.target_text_length = text_length
+        if not isinstance(others, dict):
+            return
+        for key, value in others.items():
+            self.other_settings[key] = value
+
+    def prepare_novel(self):
+        """plotと章の数を準備"""
+        self.chapter_count = self.calc_chapter_count(self.target_text_length)
+        raw = self.generator.generate_init(self.target_text_length, self.chapter_count, self.other_settings)
+        self.init_data = raw
+        self.log(["generated initial data :\n", raw, "\n"])
+        generated = json.loads(raw)
+        self.plot = generated.get("plot", "")
+        self.chapter_plots = generated.get("chapter_plots", [])
+        self.other_novel_data = {k: v for k, v in generated.items() if k not in ["plot", "chapter_plots"]}
+
+    def write_next_chapter(self):
+        """チャプターを一つ生成
+
+        Returns:
+            string: chapter content
+        """
+        self.previous_chapter_content = self.generator.generate_chapter(
+            self.plot,
+            self.other_settings.get("style", ""),
+            previous_chapter=self.previous_chapter_content if self.next_chapter_num != 1 else None,
+            chapter_num=self.next_chapter_num,
+        )
+        self.next_chapter_num += 1
+        self.total_text_length += len(self.previous_chapter_content)
+        self.log(
+            [
+                "generated chapter - next:",
+                str(self.next_chapter_num),
+                ", total text: ",
+                str(self.total_text_length),
+                ", chapter:\n",
+                self.previous_chapter_content,
+                "\n",
+            ]
+        )
+        return self.previous_chapter_content
+
+    def chapter_generator(self):
+        while self.next_chapter_num != self.chapter_count + 1:
+            yield self.write_next_chapter()
+
+
+def list_finder(tar_list, compare_func):
+    for i in range(len(tar_list)):
+        if compare_func(tar_list[i]):
+            return i
+    return -1
+
+
+def novelist_bg_task_runner(novelist, novel_id):
+    print("bg task started")
+    from app import app
+
+    if not isinstance(novelist, Novelist):
+        return
+    with app.app_context():
+        chapters_data = db.session.query(Chapter).filter_by(novel_id=novel_id).all()
+        target_chapters = list()
+        for chapter_data in chapters_data:
+            if chapter_data.chapter_number >= novelist.next_chapter_num:
+                target_chapters.append(chapter_data)
+        if len(target_chapters) != novelist.chapter_count - (novelist.next_chapter_num - 1):
+            print(
+                f"bg:: warning: chapter count does not match : db exists:{len(target_chapters)}, novelist expects:{novelist.chapter_count - (novelist.next_chapter_num - 1)}"
+            )
+        for chapter_content in novelist.chapter_generator():
+            print("bg:: chapter generated")
+            chpind = list_finder(target_chapters, lambda x: x.chapter_number == novelist.next_chapter_num - 1)
+            if chpind == -1:
+                print(f"bg:: warning: generated chapter but data not found - number:{novelist.next_chapter_num - 1}")
+                continue
+            chapter_data = target_chapters[chpind]
+            chapter_data.content = chapter_content
+            chapter_data.status_id = get_status_id("COMPLETED")
+            db.session.commit()
+            print("bg:: chapter commited")
+        print("bg:: done")
+
+
 # --- model ---
 novel_start_model = api.model(
     "NovelStreams",
@@ -79,6 +246,22 @@ novel_start_model = api.model(
         "genre": fields.String(description="novel's genre // now, only this is sent to ai -2025/11/14 3:00"),
         "textLen": fields.Integer(required=True, description="required novel's length"),
         "style": fields.String(description="novel's style"),
+    },
+)
+novel_init_model = api.model(
+    "NovelInit",
+    {
+        "user_id": fields.String(description="user's id"),
+        "novel_setting": fields.Nested(
+            api.model(
+                "NovelSetting",
+                {
+                    "ideal_text_length": fields.Integer(description="request of novel's text length"),
+                    "genre": fields.String(description="genre of novel"),
+                    "style": fields.String(description="style"),
+                },
+            )
+        ),
     },
 )
 novel_item_model = api.model(
@@ -275,3 +458,79 @@ class NovelContent(Resource):
             "title": novel.title,
             "text": full_text,
         }
+
+
+@api.route("/init")
+class NovelInit(Resource):
+    @api.doc("post_init")
+    @api.expect(novel_init_model)
+    def post(self):
+        try:
+            # データ解凍.
+            requested_param = request.get_json()
+            user_id = requested_param.get("user_id")
+            text_length = requested_param.get("novel_setting").get("ideal_text_length")
+            novel_other_settings = requested_param.get("novel_setting").copy().pop("ideal_text_length")
+            # ユーザーの確認.
+            user_data = db.session.query(User).filter_by(id=user_id).first()
+            if not user_data:
+                return {"error": f"user not found - user_id: {user_id}"}, 404
+            # Novelist準備.
+            print("starting novelist setup")
+            novelist = Novelist()
+            novelist.set_first_params(text_length, novel_other_settings)
+            novelist.prepare_novel()
+            print("finished novelist setup")
+            # Novelのデータベース登録.
+            novel_data = Novel(
+                style=novelist.other_settings.get("style"),
+                genre=novelist.other_settings.get("genre"),  # TODO:ジャンルのデータベースとの関連付け.
+                text_length=text_length,
+                title=novelist.other_novel_data.get("title", "untitled"),
+                overall_plot=novelist.plot,
+                short_summary=novelist.other_novel_data.get("summary", ""),
+                user_id=user_data.id,
+                status_id=get_status_id("GENERATING"),
+                true_text_length=0,
+            )
+            db.session.add(novel_data)
+            db.session.commit()
+            print("new novel was registered to db")
+            # 章のデータベースを作成する.
+            for i in range(novelist.chapter_count):
+                chapter = Chapter(
+                    chapter_number=i + 1,
+                    content="NO CONTENT",
+                    novel_id=novel_data.id,
+                    status_id=get_status_id("PENDING"),
+                    plot=novelist.chapter_plots[i].get("plot"),
+                )
+                db.session.add(chapter)
+            db.session.commit()
+            print(f"{novelist.chapter_count} chapters was registered to db")
+            # 1章の生成開始をデータベースに記録.
+            first_chapter = db.session.query(Chapter).filter_by(novel_id=novel_data.id, chapter_number=1).first()
+            first_chapter.status_id = get_status_id("GENERATING")
+            db.session.commit()
+            # 1章生成.
+            print("start to generate chapter")
+            chapter = novelist.write_next_chapter()
+            print("finished generating chapter")
+            # データベース記録.
+            first_chapter.content = chapter
+            first_chapter.status_id = get_status_id("COMPLETED")
+            db.session.commit()
+            # スレッディング.
+            trd = threading.Thread(target=novelist_bg_task_runner, args=(novelist, novel_data.id))
+            trd.daemon = False
+            trd.start()
+
+            return {
+                "novel_id": str(novel_data.id),
+                "title": novel_data.title,
+                "total_chapter_number": novelist.chapter_count,
+                "first_chapter_text": chapter,
+            }, 200
+
+        except Exception as e:
+            return {"error": str(e)}, 500
