@@ -52,7 +52,7 @@ class Novel(db.Model):
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.now)
     updated_at = db.Column(db.DateTime, nullable=False, default=datetime.now, onupdate=datetime.now)
     # addition 11/22
-    short_summary=db.Column(db.Text,nullable=False)
+    short_summary = db.Column(db.Text, nullable=False)
     true_text_length = db.Column(db.Integer, nullable=True)
     status_id = db.Column(db.String(32), db.ForeignKey("statuses.id"), nullable=False)
 
@@ -80,13 +80,13 @@ class Chapter(db.Model):
     updated_at = db.Column(db.DateTime, nullable=False, default=datetime.now, onupdate=datetime.now)
     # addition 11/22
     status_id = db.Column(db.String(32), db.ForeignKey("statuses.id"), nullable=False)
-    plot=db.Column(db.Text, nullable=False)
+    plot = db.Column(db.Text, nullable=False)
 
     def __repr__(self):
         return f"<Chapter {self.chapter_number} of Novel {self.novel_id}>"
 
 
-class Genres(db.Model):
+class Genre(db.Model):
     """ジャンルテーブル
 
     ジャンルの情報を管理.
@@ -101,7 +101,7 @@ class Genres(db.Model):
         return f"<Genre id : {self.id} , genre : {self.genre}>"
 
 
-class Statuses(db.Model):
+class Status(db.Model):
     """ステータステーブル
 
     ステータスの情報を管理.
@@ -113,7 +113,7 @@ class Statuses(db.Model):
     status = db.Column(db.String(32), nullable=False)
 
     def __repr__(self):
-        return f"<Statuses id : {self.id} , status : {self.status}>"
+        return f"<Status id : {self.id} , status : {self.status}>"
 
 
 class Test(db.Model):

@@ -1,15 +1,17 @@
 from src.database import db
-from src.models import Statuses
+from src.models import Status
 
 status = {0: "PENDING", 1: "GENERATING", 2: "COMPLETED", 3: "FAILED"}
+
 
 def init_db_statuses(app):
     with app.app_context():
         for id, value in status.items():
-            exist = Statuses.query.get(id)
+            exist = Status.query.get(id)
             if not exist:
-                db.session.add(Statuses(id=id, status=value))
+                db.session.add(Status(id=id, status=value))
             db.session.commit()
+
 
 def get_status_id(name):
     for key, value in status.items():
