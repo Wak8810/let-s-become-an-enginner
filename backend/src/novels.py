@@ -9,7 +9,7 @@ from flask_restx import Namespace, Resource, fields
 from google import generativeai as genai
 
 from src.database import db
-from src.models import Chapter, Novel, NovelStatus, User
+from src.models import Chapter, Genre, Novel, NovelStatus, User
 
 load_dotenv()
 
@@ -501,6 +501,12 @@ class NovelInit(Resource):
             novelist.set_first_params(text_length, novel_other_settings)
             novelist.prepare_novel()
             logger.info("finished novelist setup")
+            # ジャンルコードの検証.
+            genre_code = novelist.other_settings.get("genre")
+            if genre_code:
+                genre_exists = db.session.query(Genre).filter_by(code=genre_code).first()
+                if not genre_exists:
+                    return {"error": f"Invalid genre code: {genre_code}"}, 400
             # Novelのデータベース登録.
             novel_data = Novel(
                 style=novelist.other_settings.get("style"),
