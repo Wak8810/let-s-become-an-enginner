@@ -1,5 +1,6 @@
 import json
 import os
+from pathlib import Path
 
 from dotenv import load_dotenv
 from flask import Blueprint, Response, request, stream_with_context
@@ -132,13 +133,22 @@ class Novelist:
         Args:
             log (str or list(str)): log
         """
-        file = open("novelist.log", "a")
-        if isinstance(log, str):
-            file.write(log)
-        else:
-            for text in log:
-                file.write(text)
-        file.close()
+        # ログディレクトリとファイルを安全に解決
+        log_dir = Path(__file__).resolve().parent.parent / "logs"
+        try:
+            log_dir.mkdir(parents=True, exist_ok=True)
+        except Exception:
+            pass
+        log_file = log_dir / "novelist.log"
+        try:
+            with log_file.open("a", encoding="utf-8") as f:
+                if isinstance(log, str):
+                    f.write(log)
+                else:
+                    for text in log:
+                        f.write(text)
+        except Exception:
+            pass
 
     def calc_chapter_count(self, text_length):
         # 4000未満->1 , 4000以上->textLen/2000
