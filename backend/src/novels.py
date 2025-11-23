@@ -1,6 +1,5 @@
 import json
 import os
-import threading
 
 from dotenv import load_dotenv
 from flask import Blueprint, Response, request, stream_with_context
@@ -196,46 +195,48 @@ class Novelist:
         )
         return self.previous_chapter_content
 
-    def chapter_generator(self):
-        while self.next_chapter_num != self.chapter_count + 1:
-            yield self.write_next_chapter()
+
+# スレッド処理関係のコードは一旦コメントアウト
+#     def chapter_generator(self):
+#         while self.next_chapter_num != self.chapter_count + 1:
+#             yield self.write_next_chapter()
 
 
-def list_finder(tar_list, compare_func):
-    for i in range(len(tar_list)):
-        if compare_func(tar_list[i]):
-            return i
-    return -1
+# def list_finder(tar_list, compare_func):
+#     for i in range(len(tar_list)):
+#         if compare_func(tar_list[i]):
+#             return i
+#     return -1
 
 
-def novelist_bg_task_runner(novelist, novel_id):
-    print("bg task started")
-    from app import app
+# def novelist_bg_task_runner(novelist, novel_id):
+#     print("bg task started")
+#     from app import app
 
-    if not isinstance(novelist, Novelist):
-        return
-    with app.app_context():
-        chapters_data = db.session.query(Chapter).filter_by(novel_id=novel_id).all()
-        target_chapters = list()
-        for chapter_data in chapters_data:
-            if chapter_data.chapter_number >= novelist.next_chapter_num:
-                target_chapters.append(chapter_data)
-        if len(target_chapters) != novelist.chapter_count - (novelist.next_chapter_num - 1):
-            print(
-                f"bg:: warning: chapter count does not match : db exists:{len(target_chapters)}, novelist expects:{novelist.chapter_count - (novelist.next_chapter_num - 1)}"
-            )
-        for chapter_content in novelist.chapter_generator():
-            print("bg:: chapter generated")
-            chpind = list_finder(target_chapters, lambda x: x.chapter_number == novelist.next_chapter_num - 1)
-            if chpind == -1:
-                print(f"bg:: warning: generated chapter but data not found - number:{novelist.next_chapter_num - 1}")
-                continue
-            chapter_data = target_chapters[chpind]
-            chapter_data.content = chapter_content
-            chapter_data.status_id = get_status_id("COMPLETED")
-            db.session.commit()
-            print("bg:: chapter commited")
-        print("bg:: done")
+#     if not isinstance(novelist, Novelist):
+#         return
+#     with app.app_context():
+#         chapters_data = db.session.query(Chapter).filter_by(novel_id=novel_id).all()
+#         target_chapters = list()
+#         for chapter_data in chapters_data:
+#             if chapter_data.chapter_number >= novelist.next_chapter_num:
+#                 target_chapters.append(chapter_data)
+#         if len(target_chapters) != novelist.chapter_count - (novelist.next_chapter_num - 1):
+#             print(
+#                 f"bg:: warning: chapter count does not match : db exists:{len(target_chapters)}, novelist expects:{novelist.chapter_count - (novelist.next_chapter_num - 1)}"
+#             )
+#         for chapter_content in novelist.chapter_generator():
+#             print("bg:: chapter generated")
+#             chpind = list_finder(target_chapters, lambda x: x.chapter_number == novelist.next_chapter_num - 1)
+#             if chpind == -1:
+#                 print(f"bg:: warning: generated chapter but data not found - number:{novelist.next_chapter_num - 1}")
+#                 continue
+#             chapter_data = target_chapters[chpind]
+#             chapter_data.content = chapter_content
+#             chapter_data.status_id = get_status_id("COMPLETED")
+#             db.session.commit()
+#             print("bg:: chapter commited")
+#         print("bg:: done")
 
 
 # --- model ---
@@ -520,10 +521,10 @@ class NovelInit(Resource):
             first_chapter.content = chapter
             first_chapter.status_id = get_status_id("COMPLETED")
             db.session.commit()
-            # スレッディング.
-            trd = threading.Thread(target=novelist_bg_task_runner, args=(novelist, novel_data.id))
-            trd.daemon = False
-            trd.start()
+            # TODO: スレッディング処理を実装
+            # trd = threading.Thread(target=novelist_bg_task_runner, args=(novelist, novel_data.id))
+            # trd.daemon = False
+            # trd.start()
 
             return {
                 "novel_id": str(novel_data.id),
