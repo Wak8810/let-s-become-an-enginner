@@ -280,7 +280,7 @@ novel_item_model = api.model(
         "novel_id": fields.String(attribute="id"),
         "title": fields.String(),
         "overall_plot": fields.String(),
-        "genre": fields.String(),
+        "genre": fields.String(attribute="genre_code"),
         "style": fields.String(),
         "text_length": fields.Integer(),
         "user_id": fields.String(),
@@ -349,7 +349,7 @@ class NovelStream(Resource):
             # データベースに新たな小説データを登録
             novel_data = Novel(
                 style=style,
-                genre=genre,
+                genre_code=genre,
                 text_length=text_length,
                 title="test",  # TODO: タイトル生成機能実装時に更新
                 overall_plot="",  # TODO: プロット生成後に更新
@@ -480,7 +480,8 @@ class NovelInit(Resource):
             requested_param = request.get_json()
             user_id = requested_param.get("user_id")
             text_length = requested_param.get("novel_setting").get("ideal_text_length")
-            novel_other_settings = requested_param.get("novel_setting").copy().pop("ideal_text_length")
+            novel_other_settings = requested_param.get("novel_setting").copy()
+            novel_other_settings.pop("ideal_text_length")
             # ユーザーの確認.
             user_data = db.session.query(User).filter_by(id=user_id).first()
             if not user_data:
@@ -494,7 +495,7 @@ class NovelInit(Resource):
             # Novelのデータベース登録.
             novel_data = Novel(
                 style=novelist.other_settings.get("style"),
-                genre=novelist.other_settings.get("genre"),  # TODO:ジャンルのデータベースとの関連付け.
+                genre_code=novelist.other_settings.get("genre"),
                 text_length=text_length,
                 title=novelist.other_novel_data.get("title", "untitled"),
                 overall_plot=novelist.plot,

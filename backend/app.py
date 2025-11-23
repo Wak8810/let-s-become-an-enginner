@@ -2,6 +2,9 @@ from flask import Flask
 from flask_restx import Api, Resource
 
 from src.database import init_db
+from src.seeds.genres import seed_genres
+from src.genres import api as genres_api
+from src.genres import genres_module
 from src.novels import api as novels_api
 from src.novels import novels_module
 from src.tests import api as test_api
@@ -14,6 +17,8 @@ app = Flask(__name__)
 
 # データベースの初期化
 init_db(app)
+seed_genres(app)
+
 
 # flask-restxの設定
 api = Api(app, version="1.0", title="ReadFit API", description="時間ぴったり読書アプリAPI")
@@ -21,6 +26,10 @@ api = Api(app, version="1.0", title="ReadFit API", description="時間ぴった�
 # /tests以下のエンドポイントを登録
 app.register_blueprint(test_module)
 api.add_namespace(test_api, path="/tests")
+
+# /genres以下の登録
+app.register_blueprint(genres_module)
+api.add_namespace(genres_api, path="/genres")
 
 # /novels以下の登録.
 app.register_blueprint(novels_module)
