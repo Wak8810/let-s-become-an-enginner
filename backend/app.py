@@ -1,3 +1,5 @@
+import logging
+
 from flask import Flask
 from flask_restx import Api, Resource
 
@@ -12,6 +14,11 @@ from src.tests import test_module
 from src.users import api as user_api
 from src.users import users_module
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 
 app = Flask(__name__)
 
