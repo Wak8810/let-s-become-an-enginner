@@ -504,7 +504,7 @@ class NovelInit(Resource):
             # ジャンルコードの検証.
             genre_code = novelist.other_settings.get("genre")
             if genre_code:
-                genre_exists = db.session.query(Genre).filter_by(code=genre_code).first()
+                genre_exists = db.session.query(Genre.code).filter_by(code=genre_code).first() is not None
                 if not genre_exists:
                     return {"error": f"Invalid genre code: {genre_code}"}, 400
             # Novelのデータベース登録.
