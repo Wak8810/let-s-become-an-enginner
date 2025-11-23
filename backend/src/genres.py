@@ -18,7 +18,7 @@ genre_model = api.model(
     "Genre",
     {
         "id": fields.Integer(description="ジャンルID"),
-        "code": fields.String(description="ジャンル内部コード (例: scifi, fantasy)"),
+        "code": fields.String(description="ジャンル内部コード (例: sf, fantasy)"),
         "genre": fields.String(description="ジャンル表示名 (日本語)"),
     },
 )
