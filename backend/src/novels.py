@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 from pathlib import Path
 
@@ -11,6 +12,9 @@ from src.database import db
 from src.models import Chapter, Novel, NovelStatus, User
 
 load_dotenv()
+
+# Set up logger for this module
+logger = logging.getLogger(__name__)
 
 # URI "/novels/" 以下を定義.
 novels_module = Blueprint("novel_module", __name__)
@@ -487,11 +491,11 @@ class NovelInit(Resource):
             if not user_data:
                 return {"error": f"user not found - user_id: {user_id}"}, 404
             # Novelist準備.
-            print("starting novelist setup")
+            logger.info("starting novelist setup")
             novelist = Novelist()
             novelist.set_first_params(text_length, novel_other_settings)
             novelist.prepare_novel()
-            print("finished novelist setup")
+            logger.info("finished novelist setup")
             # Novelのデータベース登録.
             novel_data = Novel(
                 style=novelist.other_settings.get("style"),
@@ -506,7 +510,7 @@ class NovelInit(Resource):
             )
             db.session.add(novel_data)
             db.session.commit()
-            print("new novel was registered to db")
+            logger.info("new novel was registered to db")
             # 章のデータベースを作成する.
             for i in range(novelist.chapter_count):
                 chapter = Chapter(
@@ -518,15 +522,15 @@ class NovelInit(Resource):
                 )
                 db.session.add(chapter)
             db.session.commit()
-            print(f"{novelist.chapter_count} chapters was registered to db")
+            logger.info(f"{novelist.chapter_count} chapters was registered to db")
             # 1章の生成開始をデータベースに記録.
             first_chapter = db.session.query(Chapter).filter_by(novel_id=novel_data.id, chapter_number=1).first()
             first_chapter.status = NovelStatus.GENERATING
             db.session.commit()
             # 1章生成.
-            print("start to generate chapter")
+            logger.info("start to generate chapter")
             chapter = novelist.write_next_chapter()
-            print("finished generating chapter")
+            logger.info("finished generating chapter")
             # データベース記録.
             first_chapter.content = chapter
             first_chapter.status = NovelStatus.COMPLETED
