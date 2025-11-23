@@ -181,6 +181,12 @@ class Novelist:
         self.chapter_plots = generated.get("chapter_plots", [])
         self.other_novel_data = {k: v for k, v in generated.items() if k not in ["plot", "chapter_plots"]}
 
+        # チャプター数とプロット数の不整合チェック
+        if len(self.chapter_plots) != self.chapter_count:
+            raise ValueError(
+                f"チャプター数とプロット数の不整合: 作成予定の章の数 {self.chapter_count}に対して、AIが生成した章の数 {len(self.chapter_plots)}"
+            )
+
     def write_next_chapter(self):
         """チャプターを一つ生成
 
