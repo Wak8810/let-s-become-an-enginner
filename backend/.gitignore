@@ -4,3 +4,6 @@
 
 .env
 instance/
+
+*.log
+logs/
