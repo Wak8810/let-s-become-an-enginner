@@ -8,8 +8,7 @@ from flask_restx import Namespace, Resource, fields
 from google import generativeai as genai
 
 from src.database import db
-from src.models import Chapter, Novel, User
-from src.status import get_status_id
+from src.models import Chapter, Novel, NovelStatus, User
 
 load_dotenv()
 
@@ -501,7 +500,7 @@ class NovelInit(Resource):
                 overall_plot=novelist.plot,
                 short_summary=novelist.other_novel_data.get("summary", ""),
                 user_id=user_data.id,
-                status_id=get_status_id("GENERATING"),
+                status=NovelStatus.GENERATING,
                 true_text_length=0,
             )
             db.session.add(novel_data)
@@ -513,7 +512,7 @@ class NovelInit(Resource):
                     chapter_number=i + 1,
                     content="NO CONTENT",
                     novel_id=novel_data.id,
-                    status_id=get_status_id("PENDING"),
+                    status=NovelStatus.PENDING,
                     plot=novelist.chapter_plots[i].get("plot"),
                 )
                 db.session.add(chapter)
@@ -521,7 +520,7 @@ class NovelInit(Resource):
             print(f"{novelist.chapter_count} chapters was registered to db")
             # 1章の生成開始をデータベースに記録.
             first_chapter = db.session.query(Chapter).filter_by(novel_id=novel_data.id, chapter_number=1).first()
-            first_chapter.status_id = get_status_id("GENERATING")
+            first_chapter.status = NovelStatus.GENERATING
             db.session.commit()
             # 1章生成.
             print("start to generate chapter")
@@ -529,7 +528,7 @@ class NovelInit(Resource):
             print("finished generating chapter")
             # データベース記録.
             first_chapter.content = chapter
-            first_chapter.status_id = get_status_id("COMPLETED")
+            first_chapter.status = NovelStatus.COMPLETED
             db.session.commit()
             # TODO: スレッディング処理を実装
             # trd = threading.Thread(target=novelist_bg_task_runner, args=(novelist, novel_data.id))

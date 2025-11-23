@@ -9,13 +9,11 @@ from src.tests import test_module
 from src.users import api as user_api
 from src.users import users_module
 
-from src.status import init_db_statuses
 
 app = Flask(__name__)
 
 # データベースの初期化
 init_db(app)
-init_db_statuses(app)
 
 # flask-restxの設定
 api = Api(app, version="1.0", title="ReadFit API", description="時間ぴったり読書アプリAPI")
