@@ -483,8 +483,13 @@ class NovelInit(Resource):
             # データ解凍.
             requested_param = request.get_json()
             user_id = requested_param.get("user_id")
-            text_length = requested_param.get("novel_setting").get("ideal_text_length")
-            novel_other_settings = requested_param.get("novel_setting").copy()
+            novel_setting = requested_param.get("novel_setting")
+            if not isinstance(novel_setting, dict):
+                return {"error": "Missing or invalid 'novel_setting' in request payload."}, 400
+            text_length = novel_setting.get("ideal_text_length")
+            if text_length is None:
+                return {"error": "Missing 'ideal_text_length' in 'novel_setting'."}, 400
+            novel_other_settings = novel_setting.copy()
             novel_other_settings.pop("ideal_text_length")
             # ユーザーの確認.
             user_data = db.session.query(User).filter_by(id=user_id).first()
