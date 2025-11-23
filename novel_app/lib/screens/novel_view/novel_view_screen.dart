@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'widgets/novel_scroll.dart';
+import 'package:novel_app/models/novel.dart';
 
 class NovelViewScreen extends StatefulWidget {
-  const NovelViewScreen({super.key, required this.title});
-  final String title;
+  const NovelViewScreen({super.key, required this.novel});
+  final Novel novel;
 
   @override
   State<NovelViewScreen> createState() => _NovelViewScreenState();
@@ -15,15 +16,15 @@ class _NovelViewScreenState extends State<NovelViewScreen> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text(widget.title),
+        title: Text(widget.novel.title),
       ),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            Text(widget.title),
+            Text(widget.novel.title),
             SizedBox(height: 10),
-            NovelScroll(text: "ここに小説の文章が入る"),
+            NovelScroll(text: widget.novel.content),
           ],
         ),
       ),
