@@ -485,6 +485,18 @@ class NovelInit(Resource):
     @api.doc("post_init")
     @api.expect(novel_init_model)
     def post(self):
+        """小説生成ジョブを開始し、第1章の内容を返す
+
+        Request Body:
+            - user_id (string): ユーザーID
+            - novel_setting (dict):
+            - - ideal_text_length (int): 目標文字数
+            - - genre (string): sf, fantasy, mystery, horror, romance, history, light_novel, youthのどれか
+            - - style (string): 文体
+
+        Returns:
+            dict: novel_id(string), title(string), total_chapter_number(int), first_chapter_text(string)
+        """
         try:
             # データ解凍.
             requested_param = request.get_json()
