@@ -23,9 +23,7 @@ class _NovelListScreenState extends State<NovelListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('小説一覧'),
-      ),
+      appBar: AppBar(title: const Text('小説一覧')),
       body: FutureBuilder<List<Novel>>(
         future: _novels,
         builder: (context, snapshot) {
