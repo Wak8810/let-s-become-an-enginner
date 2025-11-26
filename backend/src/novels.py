@@ -1,7 +1,5 @@
 import json
 import logging
-import os
-from pathlib import Path
 
 from dotenv import load_dotenv
 from flask import Blueprint, Response, request, stream_with_context
@@ -10,7 +8,7 @@ from flask_restx import Namespace, Resource, fields
 from src.database import db
 from src.models import Chapter, Genre, Novel, NovelStatus, User
 
-from src.novelGenerator import NovelGenerator
+from src.novelGenerator import NovelGenerator  # ここでこれを使わないほうが綺麗だが必須ではない.
 from src.novelist import Novelist
 
 load_dotenv()
