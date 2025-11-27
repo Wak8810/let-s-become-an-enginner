@@ -8,8 +8,8 @@ from flask_restx import Namespace, Resource, fields
 from src.database import db
 from src.models import Chapter, Genre, Novel, NovelStatus, User
 
-from src.novelGenerator import NovelGenerator  # ここでこれを使わないほうが綺麗だが必須ではない.
-from src.novelist import Novelist
+from src.services.novel_generator import NovelGenerator  # ここでこれを使わないほうが綺麗だが必須ではない.
+from src.services.novelist import Novelist
 
 load_dotenv()
 

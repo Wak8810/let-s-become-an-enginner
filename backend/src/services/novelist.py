@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from src.novelGenerator import NovelGenerator
+from src.services.novel_generator import NovelGenerator
 
 class Novelist:
     """NovelGeneratorを使いやすくするためのラッパ"""
