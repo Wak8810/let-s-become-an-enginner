@@ -31,7 +31,7 @@ class NovelCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 8.0),
                 Text(
-                  '要求時間: ${novel.readingMinutes}分',
+                  '文字数: ${novel.textLength}文字',
                   textAlign: TextAlign.right,
                   style: const TextStyle(
                     fontSize: 12.0,
@@ -42,7 +42,7 @@ class NovelCard extends StatelessWidget {
             ),
             const SizedBox(height: 12.0),
             Text(
-              novel.content,
+              novel.overallPlot,
               overflow: TextOverflow.ellipsis,
               maxLines: 1,
             ),
