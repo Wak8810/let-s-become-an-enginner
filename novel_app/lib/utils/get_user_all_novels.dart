@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:novel_app/models/novel.dart';
 
 const String _apiBaseUrl = 'http://10.0.2.2:5000'; // Androidエミュレータでの起動用
-// const String _apiBaseUrl = 'https://172.0.0.1:5000'; //Web上での起動用
+// const String _apiBaseUrl = 'http://172.0.0.1:5000'; //Web上での起動用
 
 class GetUserAllNovels {
   static Future<List<Novel>> fetchNovels() async {
