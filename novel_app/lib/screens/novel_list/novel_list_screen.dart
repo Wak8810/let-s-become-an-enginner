@@ -20,10 +20,28 @@ class _NovelListScreenState extends State<NovelListScreen> {
     _novels = GetUserAllNovels.fetchNovels();
   }
 
+  Future<void> _refreshNovels() async {
+    setState(() {
+      _novels = GetUserAllNovels.fetchNovels();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('小説一覧')),
+      appBar: AppBar(
+        title: const Text('小説一覧'),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(kToolbarHeight / 2),
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: _refreshNovels,
+            ),
+          ),
+        ),
+      ),
       body: FutureBuilder<List<Novel>>(
         future: _novels,
         builder: (context, snapshot) {
@@ -35,6 +53,7 @@ class _NovelListScreenState extends State<NovelListScreen> {
             return const Center(child: Text('小説がありません。'));
           } else {
             final novels = snapshot.data!;
+            novels.sort((a, b) => b.createdAt.compareTo(a.createdAt));
             return ListView.builder(
               itemCount: novels.length,
               itemBuilder: (context, index) {
