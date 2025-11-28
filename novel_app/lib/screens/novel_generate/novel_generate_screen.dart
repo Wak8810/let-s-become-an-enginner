@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-import '../novel_view/novel_view_screen.dart';
-import 'dart:convert';
-import 'package:novel_app/models/novel.dart';
 import 'package:flutter/services.dart';
 import '../../models/genre.dart';
-import 'get_generate_settings.dart';
+import '../../utils/get_generate_settings.dart';
+import '../../screens/novel_generate/novel_generating_screen.dart';
 
 class NovelGenerateScreen extends StatefulWidget {
   const NovelGenerateScreen({super.key});
@@ -14,29 +12,36 @@ class NovelGenerateScreen extends StatefulWidget {
 }
 
 class _NovelGenerateScreenState extends State<NovelGenerateScreen> {
+  late Future<List<GenreData>> _genreFuture; // ← Future を保持
   String selectedGenre = '';
-  String selectedTime = '0';
-  String selectedUnit = '分';
+  int selectedTime = 0;
+  int selectedUnit = 1;
+  String selectedStyle = '三人称';
+
+  @override
+  void initState() {
+    super.initState();
+    _genreFuture = fetchGenreData(); // ← initState で1回だけ呼ぶ
+  }
 
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<List<GenreData>>(
-      future: fetchGenreData(), // ← APIここで呼ぶ
+      future: _genreFuture, // ← build のたびに再実行されない
       builder: (context, snapshot) {
-        // 通信中
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
 
-        // エラー
         if (snapshot.hasError) {
           return Center(child: Text("エラー: ${snapshot.error}"));
         }
 
-        // データ取得完了
         if (snapshot.hasData) {
           final genres = snapshot.data!;
-          selectedGenre = genres[0].code;
+          if (selectedGenre.isEmpty) {
+            selectedGenre = genres[0].code; // 初回のみ代入
+          }
 
           return Scaffold(
             appBar: AppBar(
@@ -48,7 +53,7 @@ class _NovelGenerateScreenState extends State<NovelGenerateScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ======== ジャンル ========
+                  // ===== ジャンル =====
                   const Text(
                     "ジャンル",
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -61,38 +66,35 @@ class _NovelGenerateScreenState extends State<NovelGenerateScreen> {
                     ),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-
                       child: DropdownButtonFormField<String>(
-                        initialValue: selectedGenre,
+                        value: selectedGenre,
                         decoration: const InputDecoration(
                           border: InputBorder.none,
                         ),
-                        items: genres.map((g) {
-                          return DropdownMenuItem(
-                            value: g.code, // ← value も genre だけ
-                            child: Text(g.genre),
-                          );
-                        }).toList(),
+                        items: genres
+                            .map(
+                              (g) => DropdownMenuItem(
+                                value: g.code,
+                                child: Text(g.genre),
+                              ),
+                            )
+                            .toList(),
                         onChanged: (value) {
                           if (value != null) {
                             setState(() {
-                              selectedGenre = value; // 型安全に代入
+                              selectedGenre = value;
                             });
                           }
                         },
                       ),
                     ),
                   ),
-
-                  const SizedBox(height: 24),
-
-                  // ======== 読書時間 ========
+                  // ===== 読書時間・単位・ボタン =====
                   const Text(
                     "読書時間",
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
-
                   Card(
                     elevation: 2,
                     shape: RoundedRectangleBorder(
@@ -111,7 +113,7 @@ class _NovelGenerateScreenState extends State<NovelGenerateScreen> {
                               ],
                               onChanged: (value) {
                                 setState(() {
-                                  selectedTime = value;
+                                  selectedTime = int.parse(value);
                                 });
                               },
                               decoration: InputDecoration(
@@ -123,21 +125,15 @@ class _NovelGenerateScreenState extends State<NovelGenerateScreen> {
                               ),
                             ),
                           ),
-
                           const SizedBox(width: 16),
-
-                          // 単位
                           Expanded(
                             child: DropdownButtonFormField(
                               items: const [
-                                DropdownMenuItem(value: '分', child: Text('分')),
-                                DropdownMenuItem(
-                                  value: '時間',
-                                  child: Text('時間'),
-                                ),
+                                DropdownMenuItem(value: 1, child: Text('分')),
+                                DropdownMenuItem(value: 60, child: Text('時間')),
                               ],
-                              value: selectedUnit,
-                              onChanged: (String? value) {
+                              initialValue: selectedUnit,
+                              onChanged: (int? value) {
                                 setState(() {
                                   selectedUnit = value!;
                                 });
@@ -155,10 +151,9 @@ class _NovelGenerateScreenState extends State<NovelGenerateScreen> {
                       ),
                     ),
                   ),
-
                   const Spacer(),
 
-                  // ======== 決定ボタン ========
+                  // ...（残りは変わらず）
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
@@ -169,17 +164,15 @@ class _NovelGenerateScreenState extends State<NovelGenerateScreen> {
                         ),
                       ),
                       onPressed: () {
-                        List<dynamic> decodedJson = json.decode(
-                          dummyNovelsJson,
-                        );
-                        Novel novel = Novel.fromJson(
-                          decodedJson[0] as Map<String, dynamic>,
-                        );
-
                         Navigator.pushReplacement(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => NovelViewScreen(novel: novel),
+                            builder: (context) => NovelGeneratingScreen(
+                              length: (selectedTime * selectedUnit * 450)
+                                  .toString(),
+                              genre: selectedGenre,
+                              style: selectedStyle,
+                            ),
                           ),
                         );
                       },
@@ -200,13 +193,3 @@ class _NovelGenerateScreenState extends State<NovelGenerateScreen> {
     );
   }
 }
-
-String dummyNovelsJson = """
-      [
-        {
-          "title": "普通の小説",
-          "content": "普通の内容",
-          "created_at": "2025-11-15T10:00:00Z",
-          "reading_minutes": 5
-        }
-      ]""";
