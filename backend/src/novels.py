@@ -7,7 +7,6 @@ from flask_restx import Namespace, Resource, fields
 
 from src.database import db
 from src.models import Chapter, Genre, Novel, NovelStatus, User
-
 from src.services.novel_generator import NovelGenerator  # ここでこれを使わないほうが綺麗だが必須ではない.
 from src.services.novelist import Novelist
 
@@ -377,3 +376,37 @@ class NovelInit(Resource):
 
         except Exception as e:
             return {"error": str(e)}, 500
+
+
+@api.route("/<string:novel_id>/text")
+class NovelText(Resource):
+    @api.doc("get_text", params={"novel_id": "小説のID"})
+    def get(self, novel_id):
+        """小説idから作成済みのチャプター本文を結合して返す
+
+        Args:
+            novel_id (string): 小説id
+
+        Returns:
+            dict: {
+                text(string):結合されたテキスト,
+                lastChapter(int):結合された最後のチャプター番号,
+                fully(boolean):生成予定のチャプターがすべて結合され、全文が返ったか
+                }
+        """
+        novel = db.session.get(Novel, novel_id)
+        # user_id = request.args.get("user_id", "")
+        if not novel:
+            return {"error": f"novel not found - id:{novel_id}"}, 404
+        # if novel.user_id != user_id:
+        #     return {"error": "user does not own this"}, 400
+        chapters = db.session.query(Chapter).filter_by(novel_id=novel_id).order_by(Chapter.chapter_number).all()
+        text = ""
+        count = 0
+        for i in range(len(chapters)):
+            chapter = chapters[i]
+            if chapter.status != NovelStatus.COMPLETED:
+                break
+            text += chapter.content + "\n"
+            count += 1
+        return {"text": text, "lastChapter": count, "fully": count == len(chapters)}, 200
