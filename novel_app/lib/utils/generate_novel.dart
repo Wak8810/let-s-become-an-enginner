@@ -1,8 +1,9 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../models/novel.dart';
+import '../models/generated_novel.dart';
 
-Future<Novel> fetchGeneratedNovel(
+Future<GeneratedNovel> fetchGeneratedNovel(
   String ideal_text_length,
   String genre,
   String style,
@@ -24,8 +25,8 @@ Future<Novel> fetchGeneratedNovel(
 
   if (response.statusCode == 200) {
     final response_json = json.decode(response.body);
-    Novel novel = Novel.fromJson(response_json);
-    return novel;
+    GeneratedNovel generatedNovel = GeneratedNovel.fromJson(response_json);
+    return generatedNovel;
   } else {
     final error = jsonDecode(response.body);
     throw Exception(error["message"]);

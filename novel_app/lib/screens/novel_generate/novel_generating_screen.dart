@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../utils/generate_novel.dart';
 import '../novel_view/novel_view_screen.dart';
 import 'package:novel_app/models/novel.dart';
+import '../../models/generated_novel.dart';
 
 class NovelGeneratingScreen extends StatefulWidget {
   const NovelGeneratingScreen({
@@ -21,7 +22,7 @@ class NovelGeneratingScreen extends StatefulWidget {
 class _NovelGeneratingScreenState extends State<NovelGeneratingScreen> {
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<Novel>(
+    return FutureBuilder<GeneratedNovel>(
       future: fetchGeneratedNovel(
         widget.length,
         widget.genre,
@@ -45,7 +46,11 @@ class _NovelGeneratingScreenState extends State<NovelGeneratingScreen> {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
-                builder: (context) => NovelViewScreen(novel: snapshot.data!),
+                builder: (context) => NovelViewScreen(
+                  title: snapshot.data!.title,
+                  text: snapshot.data!.firstChapterText,
+                  id: snapshot.data!.novelId,
+                ),
               ),
             );
           });
