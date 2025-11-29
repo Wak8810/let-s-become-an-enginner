@@ -4,6 +4,8 @@ import 'package:novel_app/screens/novel_list/novel_list_screen.dart';
 import 'package:novel_app/utils/user_api.dart';
 import 'package:provider/provider.dart';
 
+final RouteObserver<PageRoute> routeObserver = RouteObserver<PageRoute>();
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   const storage = FlutterSecureStorage();
@@ -32,6 +34,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
+      navigatorObservers: [routeObserver],
       home: const NovelListScreen(),
     );
   }
