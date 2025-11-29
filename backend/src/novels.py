@@ -113,6 +113,9 @@ chapter_item_model = api.model(
         "updated_at": fields.DateTime(),
     },
 )
+novel_text_model = api.model(
+    "NovelText", {"text": fields.String(), "last_chapter": fields.Integer(), "has_all_chapters": fields.Boolean()}
+)
 
 
 # "/novels/" : 小説一覧取得のエンドポイント.
@@ -381,6 +384,7 @@ class NovelInit(Resource):
 @api.route("/<string:novel_id>/text")
 class NovelText(Resource):
     @api.doc("get_text", params={"novel_id": "小説のID"})
+    @api.marshal_with(novel_text_model)
     def get(self, novel_id):
         """小説idから作成済みのチャプター本文を結合して返す
 
@@ -397,7 +401,7 @@ class NovelText(Resource):
         novel = db.session.get(Novel, novel_id)
         # user_id = request.args.get("user_id", "")
         if not novel:
-            return {"error": f"novel not found - id:{novel_id}"}, 404
+            api.abort(404, f"novel not found - id:{novel_id}")
         # if novel.user_id != user_id:
         #     return {"error": "user does not own this"}, 400
         chapters = db.session.query(Chapter).filter_by(novel_id=novel_id).order_by(Chapter.chapter_number).all()
@@ -409,4 +413,4 @@ class NovelText(Resource):
                 break
             text += chapter.content + "\n"
             count += 1
-        return {"text": text, "lastChapter": count, "fully": count == len(chapters)}, 200
+        return {"text": text, "last_chapter": count, "has_all_chapters": count == len(chapters)}
