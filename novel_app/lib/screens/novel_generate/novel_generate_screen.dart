@@ -149,9 +149,39 @@ class _NovelGenerateScreenState extends State<NovelGenerateScreen> {
                       ),
                     ),
                   ),
+
+                  const Text(
+                    "スタイル",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Card(
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: DropdownMenu<String>(
+                        initialSelection: selectedGenre,
+                        label: const Text("スタイル"),
+                        dropdownMenuEntries: [
+                          DropdownMenuEntry(value: '一人称視点', label: '一人称視点'),
+                          DropdownMenuEntry(value: '三人称視点', label: '三人称視点'),
+                        ],
+                        onSelected: (value) {
+                          if (value != null) {
+                            setState(() {
+                              selectedStyle = value;
+                            });
+                          }
+                        },
+                      ),
+                    ),
+                  ),
+
                   const Spacer(),
 
-                  // ...（残りは変わらず）
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
