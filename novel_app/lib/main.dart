@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:novel_app/screens/novel_list/novel_list_screen.dart';
 import 'package:novel_app/utils/user_api.dart';
+import 'package:provider/provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -12,14 +13,16 @@ void main() async {
     userId = newUser.id;
     await storage.write(key: 'user_id', value: userId);
   }
-  runApp(MyApp(userId: userId));
+  runApp(
+    Provider<String>.value(
+      value: userId,
+      child: const MyApp(),
+    ),
+  );
 }
 
-
-
 class MyApp extends StatelessWidget {
-  const MyApp({super.key, required this.userId});
-  final String userId;
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +32,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: NovelListScreen(userId: userId),
+      home: const NovelListScreen(),
     );
   }
 }
