@@ -66,20 +66,18 @@ class _NovelGenerateScreenState extends State<NovelGenerateScreen> {
                     ),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: DropdownButtonFormField<String>(
-                        value: selectedGenre,
-                        decoration: const InputDecoration(
-                          border: InputBorder.none,
-                        ),
-                        items: genres
+                      child: DropdownMenu<String>(
+                        initialSelection: selectedGenre,
+                        label: const Text("ジャンル"),
+                        dropdownMenuEntries: genres
                             .map(
-                              (g) => DropdownMenuItem(
+                              (g) => DropdownMenuEntry<String>(
                                 value: g.code,
-                                child: Text(g.genre),
+                                label: g.genre,
                               ),
                             )
                             .toList(),
-                        onChanged: (value) {
+                        onSelected: (value) {
                           if (value != null) {
                             setState(() {
                               selectedGenre = value;
