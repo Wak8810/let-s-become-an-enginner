@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:novel_app/main.dart';
 import 'package:novel_app/utils/get_user_all_novels.dart';
 import 'package:novel_app/screens/novel_list/widgets/novel_card.dart';
 import 'package:novel_app/models/novel.dart';
 import 'package:novel_app/widgets/generate_novel_screen_button.dart';
 
 class NovelListScreen extends StatefulWidget {
-  const NovelListScreen({super.key});
+  const NovelListScreen({super.key, required this.userId});
+  final String userId;
 
   @override
   State<NovelListScreen> createState() => _NovelListScreenState();
@@ -17,12 +20,12 @@ class _NovelListScreenState extends State<NovelListScreen> {
   @override
   void initState() {
     super.initState();
-    _novels = GetUserAllNovels.fetchNovels();
+    _novels = GetUserAllNovels.fetchNovels(widget.userId);
   }
 
   Future<void> _refreshNovels() async {
     setState(() {
-      _novels = GetUserAllNovels.fetchNovels();
+      _novels = GetUserAllNovels.fetchNovels(widget.userId);
     });
   }
 
