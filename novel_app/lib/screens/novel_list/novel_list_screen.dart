@@ -3,6 +3,7 @@ import 'package:novel_app/utils/get_user_all_novels.dart';
 import 'package:novel_app/screens/novel_list/widgets/novel_card.dart';
 import 'package:novel_app/models/novel.dart';
 import 'package:novel_app/widgets/generate_novel_screen_button.dart';
+import 'package:novel_app/main.dart';
 import 'package:provider/provider.dart';
 
 class NovelListScreen extends StatefulWidget {
@@ -12,21 +13,57 @@ class NovelListScreen extends StatefulWidget {
   State<NovelListScreen> createState() => _NovelListScreenState();
 }
 
-class _NovelListScreenState extends State<NovelListScreen> {
-  Future<List<Novel>>? _novels;
+class _NovelListScreenState extends State<NovelListScreen> with RouteAware {
+  List<Novel>? _novels;
+  bool _isLoading = true;
   late String _userId;
+  bool _isInitialized = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _userId = Provider.of<String>(context);
-    _novels = GetUserAllNovels.fetchNovels(_userId);
+    // 初期化とデータ取得が一度だけ行われるようにする
+    if (!_isInitialized) {
+      _userId = Provider.of<String>(context);
+      // routeObserverをサブスクして，このページになったのを見る
+      routeObserver.subscribe(this, ModalRoute.of(context)! as PageRoute);
+      _fetchInitialNovels();
+      _isInitialized = true;
+    }
   }
 
+  // 小説の初期リストを取得し、ローディング状態を設定
+  Future<void> _fetchInitialNovels() async {
+    final novels = await GetUserAllNovels.fetchNovels(_userId);
+    if (mounted) {
+      setState(() {
+        _novels = novels;
+        _isLoading = false;
+      });
+    }
+  }
+
+  // こいつが完全に閉じたら，サブスクを解除
+  @override
+  void dispose() {
+    routeObserver.unsubscribe(this);
+    super.dispose();
+  }
+
+  /// ユーザーが戻るでこの画面に来た時実行
+  @override
+  void didPopNext() {
+    _refreshNovels();
+  }
+
+  /// APIから小説の新しいリストを取得
   Future<void> _refreshNovels() async {
-    setState(() {
-      _novels = GetUserAllNovels.fetchNovels(_userId);
-    });
+    final novels = await GetUserAllNovels.fetchNovels(_userId);
+    if (mounted) {
+      setState(() {
+        _novels = novels; // 新しいデータで更新
+      });
+    }
   }
 
   @override
@@ -45,27 +82,18 @@ class _NovelListScreenState extends State<NovelListScreen> {
           ),
         ),
       ),
-      body: FutureBuilder<List<Novel>>(
-        future: _novels,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text('小説がありません。'));
-          } else {
-            final novels = snapshot.data!;
-            novels.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-            return ListView.builder(
-              itemCount: novels.length,
-              itemBuilder: (context, index) {
-                return NovelCard(novel: novels[index]);
-              },
-            );
-          }
-        },
-      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator()) // ローディングのくるくる
+          : _novels == null || _novels!.isEmpty
+              ? const Center(child: Text('小説がありません。'))
+              : ListView.builder(
+                  itemCount: _novels!.length,
+                  itemBuilder: (context, index) {
+                    // 作成日で小説をソート（新しいものが先頭）。
+                    _novels!.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+                    return NovelCard(novel: _novels![index]);
+                  },
+                ),
       floatingActionButton: const GenerateNovelScreen(),
     );
   }
