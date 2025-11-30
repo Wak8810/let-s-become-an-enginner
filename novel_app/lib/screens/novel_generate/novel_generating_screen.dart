@@ -86,6 +86,13 @@ class _NovelGeneratingScreenState extends State<NovelGeneratingScreen> {
                       onPressed: () => setState(() {}),
                       child: const Text("もう一度試す"),
                     ),
+
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                      child: const Text("小説一覧に戻る"),
+                    ),
                   ],
                 ),
               ),
