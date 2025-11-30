@@ -1,5 +1,6 @@
 import json
 import logging
+import threading
 
 from dotenv import load_dotenv
 from flask import Blueprint, Response, request, stream_with_context
@@ -57,7 +58,7 @@ def novelist_bg_task_runner(novelist, novel_id):
                     chapter_number=novelist.next_chapter_num-1,
                     content="NO CONTENT",
                     novel_id=novel_id,
-                    status=NovelStatus.COMPLETED,
+                    status=NovelStatus.GENERATING,
                     plot=novelist.chapter_plots[novelist.next_chapter_num-2],
                 )
                 db.session.add(new_chapter)
