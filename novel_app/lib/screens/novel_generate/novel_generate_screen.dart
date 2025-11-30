@@ -17,6 +17,7 @@ class _NovelGenerateScreenState extends State<NovelGenerateScreen> {
   int selectedTime = 0;
   int selectedUnit = 1;
   String selectedStyle = '一人称視点';
+  bool canSubmit = false;
 
   @override
   void initState() {
@@ -140,6 +141,9 @@ class _NovelGenerateScreenState extends State<NovelGenerateScreen> {
                               onChanged: (value) {
                                 setState(() {
                                   selectedTime = int.parse(value);
+                                  canSubmit =
+                                      (selectedTime != null &&
+                                      selectedTime >= 0);
                                 });
                               },
                               decoration: InputDecoration(
@@ -192,17 +196,19 @@ class _NovelGenerateScreenState extends State<NovelGenerateScreen> {
                         ),
                       ),
                       onPressed: () {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => NovelGeneratingScreen(
-                              length: (selectedTime * selectedUnit * 450)
-                                  .toString(),
-                              genre: selectedGenre,
-                              style: selectedStyle,
+                        if (canSubmit) {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => NovelGeneratingScreen(
+                                length: (selectedTime * selectedUnit * 450)
+                                    .toString(),
+                                genre: selectedGenre,
+                                style: selectedStyle,
+                              ),
                             ),
-                          ),
-                        );
+                          );
+                        }
                       },
                       child: const Text("生成する", style: TextStyle(fontSize: 18)),
                     ),
