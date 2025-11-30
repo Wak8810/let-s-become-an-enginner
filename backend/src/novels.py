@@ -74,8 +74,9 @@ def novelist_bg_task_runner(novelist, novel_id):
             chapter_data.status = NovelStatus.COMPLETED
             db.session.commit()
             print("bg:: chapter commited")
-        print("bg:: done")
-
+        novel_data.status=NovelStatus.COMPLETED
+        db.session.commit()
+        print("bg:: novel commited, done")
 
 # --- model ---
 novel_start_model = api.model(
