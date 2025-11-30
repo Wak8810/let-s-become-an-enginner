@@ -45,38 +45,40 @@ def novelist_bg_task_runner(novelist, novel_id):
             print(f"bg:: error : novel not found -> task killed - id:{novel_id}")
             return
         novel_data.status=NovelStatus.GENERATING
-        for chapter_data in chapters_data:
-            if chapter_data.status==NovelStatus.COMPLETED:
-                continue
-            chapter_data.status=NovelStatus.GENERATING
         db.session.commit()
         # 生成.
-        for chapter_content in novelist.chapter_generator():
-            print("bg:: chapter generated")
-            # 該当の章のインデックスを得る.
-            chpind = list_finder(chapters_data, lambda x: x.chapter_number == novelist.next_chapter_num - 1)
-            # 生成された章がdbから見つからなかった場合.
+        while not novelist.is_completed():
+            # 対象chapterの探索.
+            chpind = list_finder(chapters_data, lambda x: x.chapter_number == novelist.next_chapter_num)
+            chapter=None
             if chpind == -1:
-                print(f"bg:: warning: generated chapter but data not found - number:{novelist.next_chapter_num - 1}")
+                # なければ生成する.
+                print(f"bg:: warning: generated chapter but data not found - number:{novelist.next_chapter_num}")
                 new_chapter=Chapter(
                     chapter_number=novelist.next_chapter_num-1,
-                    content=chapter_content,
+                    content="NO CONTENT",
                     novel_id=novel_id,
                     status=NovelStatus.COMPLETED,
                     plot=novelist.chapter_plots[novelist.next_chapter_num-2],
                 )
                 db.session.add(new_chapter)
-                db.session.commit()
-                print("bg:: unfound chapter was created, db commited")
-                continue
-            chapter_data = chapters_data[chpind]
-            chapter_data.content = chapter_content
-            chapter_data.status = NovelStatus.COMPLETED
+                chapter=new_chapter
+            else:
+                chapter= chapters_data[chpind]
+            # GENERATING 更新.
+            chapter.status=NovelStatus.GENERATING
             db.session.commit()
-            print("bg:: chapter commited")
+            # 生成.
+            print(f"bg:: start generating chapter: {novelist.next_chapter_num}")
+            chapter_content=novelist.write_next_chapter()
+            chapter.content = chapter_content
+            chapter.status = NovelStatus.COMPLETED
+            db.session.commit()
+            print("bg:: chapter generated and commited")
+        # novel 更新.
         novel_data.status=NovelStatus.COMPLETED
         db.session.commit()
-        print("bg:: novel commited, done")
+        print("bg:: novel commited, task done")
 
 # --- model ---
 novel_start_model = api.model(
