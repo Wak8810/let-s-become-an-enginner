@@ -3,11 +3,10 @@ import logging
 
 from dotenv import load_dotenv
 from flask import Blueprint, Response, request, stream_with_context
-from flask_restx import Namespace, Resource, fields
+from flask_restx import Namespace, Resource, fields, reqparse
 
 from src.database import db
 from src.models import Chapter, Genre, Novel, NovelStatus, User
-
 from src.services.novel_generator import NovelGenerator  # ここでこれを使わないほうが綺麗だが必須ではない.
 from src.services.novelist import Novelist
 
@@ -114,6 +113,12 @@ chapter_item_model = api.model(
         "updated_at": fields.DateTime(),
     },
 )
+novel_text_model = api.model(
+    "NovelText", {"text": fields.String(), "last_chapter": fields.Integer(), "has_all_chapters": fields.Boolean()}
+)
+# -- parser --
+novels_text_parser = reqparse.RequestParser()
+novels_text_parser.add_argument("X-User-ID", location="headers", type=str, required=True, help="User id")
 
 
 # "/novels/" : 小説一覧取得のエンドポイント.
@@ -377,3 +382,45 @@ class NovelInit(Resource):
 
         except Exception as e:
             return {"error": str(e)}, 500
+
+
+@api.route("/<string:novel_id>/text")
+class NovelText(Resource):
+    @api.doc("get_text", params={"novel_id": "小説のID"})
+    @api.expect(novels_text_parser)
+    @api.marshal_with(novel_text_model)
+    def get(self, novel_id):
+        """小説idから作成済みのチャプター本文を結合して返す
+
+        Args:
+            novel_id (string): 小説id
+            X-User-ID (string): user id
+
+        Returns:
+            dict: {
+                text(string):結合されたテキスト,
+                last_chapter(int):結合された最後のチャプター番号,
+                has_all_chapters(boolean):生成予定のチャプターがすべて結合され、全文が返ったか
+                }
+        """
+        novel = db.session.get(Novel, novel_id)
+        user_id = request.headers.get("X-User-ID")
+        # 認証情報なしエラー.
+        if not user_id:
+            api.abort(401, "Authorization header 'X-User-ID' is required")
+        # 小説なしエラー.
+        if not novel:
+            api.abort(404, f"Novel not found - id:{novel_id}")
+        # ユーザーの権限なしエラー.
+        if novel.user_id != user_id:
+            api.abort(403, "You do not have permission to access this novel")
+        chapters = db.session.query(Chapter).filter_by(novel_id=novel_id).order_by(Chapter.chapter_number).all()
+        text = ""
+        count = 0
+        for i in range(len(chapters)):
+            chapter = chapters[i]
+            if chapter.status != NovelStatus.COMPLETED:
+                break
+            text += chapter.content + "\n"
+            count += 1
+        return {"text": text, "last_chapter": count, "has_all_chapters": count == len(chapters)}
