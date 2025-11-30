@@ -1,30 +1,38 @@
 import 'package:flutter/material.dart';
 import 'widgets/novel_scroll.dart';
-import 'package:novel_app/models/novel.dart';
 
-class NovelViewScreen extends StatefulWidget {
-  const NovelViewScreen({super.key, required this.novel});
-  final Novel novel;
+class NovelViewScreen extends StatelessWidget {
+  const NovelViewScreen({
+    super.key,
+    required this.title,
+    required this.text,
+    required this.id,
+  });
 
-  @override
-  State<NovelViewScreen> createState() => _NovelViewScreenState();
-}
+  final String title;
+  final String text;
+  final String id;
 
-class _NovelViewScreenState extends State<NovelViewScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text(widget.novel.title),
+        title: Text('閲覧ページ'),
       ),
-      body: Center(
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Text(widget.novel.title),
-            SizedBox(height: 10),
-            NovelScroll(text: widget.novel.content),
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: Theme.of(
+                context,
+              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            Expanded(child: NovelScroll(text: text)),
           ],
         ),
       ),
