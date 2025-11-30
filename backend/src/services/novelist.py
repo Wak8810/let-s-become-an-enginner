@@ -109,8 +109,6 @@ class Novelist:
         )
         return self.previous_chapter_content
 
-
-# スレッド処理関係のコードは一旦コメントアウト
-#     def chapter_generator(self):
-#         while self.next_chapter_num != self.chapter_count + 1:
-#             yield self.write_next_chapter()
+    def chapter_generator(self):
+        while self.next_chapter_num != self.chapter_count + 1:
+            yield self.write_next_chapter()
