@@ -1,5 +1,6 @@
 import json
 import logging
+import threading
 
 from dotenv import load_dotenv
 from flask import Blueprint, Response, request, stream_with_context
@@ -19,12 +20,14 @@ logger = logging.getLogger(__name__)
 novels_module = Blueprint("novel_module", __name__)
 api = Namespace("novels", description="小説生成・管理用エンドポイント群")
 
+
 # -- For threading --
 # def list_finder(tar_list, compare_func):
 #     for i in range(len(tar_list)):
 #         if compare_func(tar_list[i]):
 #             return i
 #     return -1
+
 
 # def novelist_bg_task_runner(novelist, novel_id):
 #     print("bg task started")
@@ -50,7 +53,7 @@ api = Namespace("novels", description="小説生成・管理用エンドポイ�
 #                 continue
 #             chapter_data = target_chapters[chpind]
 #             chapter_data.content = chapter_content
-#             chapter_data.status_id = get_status_id("COMPLETED")
+#             chapter_data.status = NovelStatus.COMPLETED
 #             db.session.commit()
 #             print("bg:: chapter commited")
 #         print("bg:: done")
@@ -99,9 +102,10 @@ novel_item_model = api.model(
 novel_content_model = api.model(
     "NovelContent",
     {
-        "novel_id": fields.String(attribute="id"),
-        "title": fields.String(),
-        "text": fields.String(),
+        "novel_status": fields.String(),
+        "new_chapters": fields.List(
+            fields.Nested(api.model("Chapter", {"index": fields.Integer(), "content": fields.String()}))
+        ),
     },
 )
 chapter_item_model = api.model(
@@ -119,6 +123,11 @@ novel_text_model = api.model(
 # -- parser --
 novels_text_parser = reqparse.RequestParser()
 novels_text_parser.add_argument("X-User-ID", location="headers", type=str, required=True, help="User id")
+novels_contents_parser = reqparse.RequestParser()
+novels_contents_parser.add_argument("X-User-ID", location="headers", type=str, required=True, help="User id")
+novels_contents_parser.add_argument(
+    "X-Current-Index", location="headers", type=str, required=True, help="フロント側の持っている最後の章の番号"
+)
 
 
 # "/novels/" : 小説一覧取得のエンドポイント.
@@ -260,9 +269,10 @@ class NovelChapters(Resource):
 @api.route("/<string:novel_id>/contents")
 class NovelContent(Resource):
     @api.doc("get_novel_text", params={"novel_id": "小説のID"})
+    @api.expect(novels_contents_parser)
     @api.marshal_with(novel_content_model)
     def get(self, novel_id):
-        """指定された小説の全チャプターの内容を結合して返す
+        """指定された章以降をリストにして返す
 
         Args:
             novel_id (str): 小説のID
@@ -271,17 +281,30 @@ class NovelContent(Resource):
             dict: 小説のID、タイトル、結合されたテキスト内容
         """
         novel = db.session.get(Novel, novel_id)
+        user_id = request.headers.get("X-User-ID")
+        current_index = request.headers.get("X-Current-Index")
+        # 認証情報なしエラー.
+        if not user_id:
+            api.abort(401, "Authorization header 'X-User-ID' is required")
+        if not current_index:
+            api.abort(401, "Authorization header 'X-Current-Index' is required")
+        current_index = int(current_index)
+        # 小説なしエラー.
         if not novel:
-            api.abort(404, f"Novel {novel_id} not found")
+            api.abort(404, f"Novel not found - id:{novel_id}")
+        # ユーザーの権限なしエラー.
+        if novel.user_id != user_id:
+            api.abort(403, "You do not have permission to access this novel")
 
         chapters = db.session.query(Chapter).filter_by(novel_id=novel_id).order_by(Chapter.chapter_number).all()
-        full_text = "\n\n".join([chapter.content for chapter in chapters])
-
-        return {
-            "id": novel.id,
-            "title": novel.title,
-            "text": full_text,
-        }
+        results = []
+        status = NovelStatus.COMPLETED
+        for i in range(current_index, len(chapters)):
+            if chapters[i].status == NovelStatus.COMPLETED:
+                results.append({"index": i + 1, "content": chapters[i].content})
+            else:
+                status = chapters[i].status
+        return {"novel_status": status.name, "new_chapters": results}
 
 
 @api.route("/init")
