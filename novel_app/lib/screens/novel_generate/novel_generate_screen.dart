@@ -13,10 +13,10 @@ class NovelGenerateScreen extends StatefulWidget {
 
 class _NovelGenerateScreenState extends State<NovelGenerateScreen> {
   late Future<List<GenreData>> _genreFuture; // ← Future を保持
-  String selectedGenre = '';
+  String selectedGenre = 'sf';
   int selectedTime = 0;
   int selectedUnit = 1;
-  String selectedStyle = '三人称';
+  String selectedStyle = '一人称視点';
 
   @override
   void initState() {
@@ -68,7 +68,6 @@ class _NovelGenerateScreenState extends State<NovelGenerateScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: DropdownMenu<String>(
                         initialSelection: selectedGenre,
-                        label: const Text("ジャンル"),
                         dropdownMenuEntries: genres
                             .map(
                               (g) => DropdownMenuEntry<String>(
@@ -102,8 +101,7 @@ class _NovelGenerateScreenState extends State<NovelGenerateScreen> {
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: DropdownMenu<String>(
-                        initialSelection: selectedGenre,
-                        label: const Text("スタイル"),
+                        initialSelection: selectedStyle,
                         dropdownMenuEntries: [
                           DropdownMenuEntry(value: '一人称視点', label: '一人称視点'),
                           DropdownMenuEntry(value: '三人称視点', label: '三人称視点'),

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../utils/generate_novel.dart';
 import '../novel_view/novel_view_screen.dart';
-import 'package:novel_app/models/novel.dart';
 import '../../models/generated_novel.dart';
 
 class NovelGeneratingScreen extends StatefulWidget {
@@ -31,12 +30,67 @@ class _NovelGeneratingScreenState extends State<NovelGeneratingScreen> {
       builder: (context, snapshot) {
         // 通信中
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return Scaffold(
+            backgroundColor: Colors.white,
+            body: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 20),
+                  const Text(
+                    "小説を生成しています…",
+                    style: TextStyle(fontSize: 16, color: Colors.black87),
+                  ),
+                ],
+              ),
+            ),
+          );
         }
 
         // エラー
         if (snapshot.hasError) {
-          return Center(child: Text("エラー: ${snapshot.error}"));
+          return Scaffold(
+            backgroundColor: Colors.white,
+            body: Center(
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                margin: const EdgeInsets.symmetric(horizontal: 40),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 10,
+                      offset: Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      size: 40,
+                      color: Colors.red,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      "エラーが発生しました。\n${snapshot.error}",
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                    const SizedBox(height: 20),
+                    ElevatedButton(
+                      onPressed: () => setState(() {}),
+                      child: const Text("もう一度試す"),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
         }
 
         // データ取得完了
