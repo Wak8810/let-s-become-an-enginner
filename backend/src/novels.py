@@ -21,14 +21,15 @@ novels_module = Blueprint("novel_module", __name__)
 api = Namespace("novels", description="小説生成・管理用エンドポイント群")
 
 
-# -- threading --
+# リストからcompare_funcがTrueを返す要素のインデックスを得る.
 def list_finder(tar_list, compare_func):
     for i in range(len(tar_list)):
         if compare_func(tar_list[i]):
             return i
     return -1
 
-
+# -- threading --
+# バックエンドタスク.
 def novelist_bg_task_runner(novelist, novel_id):
     print("bg task started")
     from app import app
@@ -37,21 +38,38 @@ def novelist_bg_task_runner(novelist, novel_id):
         return
     with app.app_context():
         chapters_data = db.session.query(Chapter).filter_by(novel_id=novel_id).all()
-        target_chapters = list()
+        # db のステータス更新.
+        novel_data= db.session.get(Novel, novel_id)
+        if not novel_data:
+            # novelのdbが見つからなければエラー終了.
+            print(f"bg:: error : novel not found -> task killed - id:{novel_id}")
+            return
+        novel_data.status=NovelStatus.GENERATING
         for chapter_data in chapters_data:
-            if chapter_data.chapter_number >= novelist.next_chapter_num:
-                target_chapters.append(chapter_data)
-        if len(target_chapters) != novelist.chapter_count - (novelist.next_chapter_num - 1):
-            print(
-                f"bg:: warning: chapter count does not match : db exists:{len(target_chapters)}, novelist expects:{novelist.chapter_count - (novelist.next_chapter_num - 1)}"
-            )
+            if chapter_data.status==NovelStatus.COMPLETED:
+                continue
+            chapter_data.status=NovelStatus.GENERATING
+        db.session.commit()
+        # 生成.
         for chapter_content in novelist.chapter_generator():
             print("bg:: chapter generated")
-            chpind = list_finder(target_chapters, lambda x: x.chapter_number == novelist.next_chapter_num - 1)
+            # 該当の章のインデックスを得る.
+            chpind = list_finder(chapters_data, lambda x: x.chapter_number == novelist.next_chapter_num - 1)
+            # 生成された章がdbから見つからなかった場合.
             if chpind == -1:
                 print(f"bg:: warning: generated chapter but data not found - number:{novelist.next_chapter_num - 1}")
+                new_chapter=Chapter(
+                    chapter_number=novelist.next_chapter_num-1,
+                    content=chapter_content,
+                    novel_id=novel_id,
+                    status=NovelStatus.COMPLETED,
+                    plot=novelist.chapter_plots[novelist.next_chapter_num-2],
+                )
+                db.session.add(new_chapter)
+                db.session.commit()
+                print("bg:: unfound chapter was created, db commited")
                 continue
-            chapter_data = target_chapters[chpind]
+            chapter_data = chapters_data[chpind]
             chapter_data.content = chapter_content
             chapter_data.status = NovelStatus.COMPLETED
             db.session.commit()
