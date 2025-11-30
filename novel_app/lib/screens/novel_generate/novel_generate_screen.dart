@@ -13,10 +13,10 @@ class NovelGenerateScreen extends StatefulWidget {
 
 class _NovelGenerateScreenState extends State<NovelGenerateScreen> {
   late Future<List<GenreData>> _genreFuture; // ← Future を保持
-  String selectedGenre = '';
+  String selectedGenre = 'sf';
   int selectedTime = 0;
   int selectedUnit = 1;
-  String selectedStyle = '三人称';
+  String selectedStyle = '一人称視点';
 
   @override
   void initState() {
@@ -66,20 +66,17 @@ class _NovelGenerateScreenState extends State<NovelGenerateScreen> {
                     ),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: DropdownButtonFormField<String>(
-                        value: selectedGenre,
-                        decoration: const InputDecoration(
-                          border: InputBorder.none,
-                        ),
-                        items: genres
+                      child: DropdownMenu<String>(
+                        initialSelection: selectedGenre,
+                        dropdownMenuEntries: genres
                             .map(
-                              (g) => DropdownMenuItem(
+                              (g) => DropdownMenuEntry<String>(
                                 value: g.code,
-                                child: Text(g.genre),
+                                label: g.genre,
                               ),
                             )
                             .toList(),
-                        onChanged: (value) {
+                        onSelected: (value) {
                           if (value != null) {
                             setState(() {
                               selectedGenre = value;
@@ -89,7 +86,36 @@ class _NovelGenerateScreenState extends State<NovelGenerateScreen> {
                       ),
                     ),
                   ),
+
                   // ===== 読書時間・単位・ボタン =====
+                  const Text(
+                    "スタイル",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Card(
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: DropdownMenu<String>(
+                        initialSelection: selectedStyle,
+                        dropdownMenuEntries: [
+                          DropdownMenuEntry(value: '一人称視点', label: '一人称視点'),
+                          DropdownMenuEntry(value: '三人称視点', label: '三人称視点'),
+                        ],
+                        onSelected: (value) {
+                          if (value != null) {
+                            setState(() {
+                              selectedStyle = value;
+                            });
+                          }
+                        },
+                      ),
+                    ),
+                  ),
                   const Text(
                     "読書時間",
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -151,13 +177,15 @@ class _NovelGenerateScreenState extends State<NovelGenerateScreen> {
                       ),
                     ),
                   ),
+
                   const Spacer(),
 
-                  // ...（残りは変わらず）
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.black,
+                        foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -176,10 +204,7 @@ class _NovelGenerateScreenState extends State<NovelGenerateScreen> {
                           ),
                         );
                       },
-                      child: const Text(
-                        "ViewPage",
-                        style: TextStyle(fontSize: 18),
-                      ),
+                      child: const Text("生成する", style: TextStyle(fontSize: 18)),
                     ),
                   ),
                 ],
