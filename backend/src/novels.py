@@ -1,6 +1,5 @@
 import json
 import logging
-import threading
 
 from dotenv import load_dotenv
 from flask import Blueprint, Response, request, stream_with_context
@@ -283,7 +282,7 @@ class NovelContent(Resource):
         novel = db.session.get(Novel, novel_id)
         user_id = request.headers.get("X-User-ID")
         current_index = request.headers.get("X-Current-Index")
-        # 認証情報なしエラー.
+        # 情報なしエラー.
         if not user_id:
             api.abort(401, "Authorization header 'X-User-ID' is required")
         if not current_index:
@@ -298,13 +297,12 @@ class NovelContent(Resource):
 
         chapters = db.session.query(Chapter).filter_by(novel_id=novel_id).order_by(Chapter.chapter_number).all()
         results = []
-        status = NovelStatus.COMPLETED
         for i in range(current_index, len(chapters)):
             if chapters[i].status == NovelStatus.COMPLETED:
                 results.append({"index": i + 1, "content": chapters[i].content})
             else:
-                status = chapters[i].status
-        return {"novel_status": status.name, "new_chapters": results}
+                break
+        return {"novel_status": novel.status.name, "new_chapters": results}
 
 
 @api.route("/init")
