@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../utils/api_service.dart';
+import 'package:provider/provider.dart';
+
 
 class TestApiPage extends StatefulWidget {
   const TestApiPage({super.key});
@@ -10,6 +12,7 @@ class TestApiPage extends StatefulWidget {
 
 class _TestApiPageState extends State<TestApiPage> {
   String apiResult = "";
+  late String _userId;
 
   @override
   void initState() {
@@ -17,8 +20,14 @@ class _TestApiPageState extends State<TestApiPage> {
     _loadApi();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _userId = Provider.of<String>(context);
+  }
+
   Future<void> _loadApi() async {
-    final result = await fetchApiData();
+    final result = await fetchApiData(_userId);
     setState(() {
       apiResult = result;
     });
