@@ -1,10 +1,7 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import '../models/novel.dart';
+import './api_config.dart';
 import '../models/generated_novel.dart';
-
-const String _apiBaseUrl = 'http://10.0.2.2:5000'; // Androidエミュレータでの起動用
-// const String _apiBaseUrl = 'http://172.0.0.1:5000'; //Web上での起動用
 
 Future<GeneratedNovel> fetchGeneratedNovel(
   String ideal_text_length,
@@ -12,7 +9,7 @@ Future<GeneratedNovel> fetchGeneratedNovel(
   String style,
   String userId,
 ) async {
-  final url = Uri.parse('$_apiBaseUrl/novels/init');
+  final url = Uri.parse('$apiBaseUrl/novels/init');
   final novelData = {
     "user_id": userId,
     "novel_setting": {
