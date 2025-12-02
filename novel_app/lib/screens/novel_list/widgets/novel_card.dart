@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:novel_app/models/novel.dart';
-//import 'package:novel_app/models/novel_content.dart';
+import 'package:novel_app/models/novel_content.dart';
 import 'package:novel_app/utils/get_novel_content.dart';
+import 'package:novel_app/screens/novel_view/novel_view_screen.dart';
 
 class NovelCard extends StatelessWidget {
   final Novel novel;
@@ -16,11 +17,25 @@ class NovelCard extends StatelessWidget {
         try {
           final novelContent =
               await GetNovelContent.fetchNovelContent(novel.novelId, userId);
+          if (context.mounted) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => NovelViewScreen(
+                  title: novel.title,
+                  text: novelContent.text,
+                  novelId: novel.novelId,
+                  finalChapterIndex: novelContent.lastChapter,
+                  totalChapterNumber: novelContent.totalChapters,
+                ),
+              ),
+            );
+          }
         } catch (e) {
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('小説の読み込みに失敗しました: $e'),
+                content: Text('小説の読み込みに失敗しました。'),
               ),
             );
           }
