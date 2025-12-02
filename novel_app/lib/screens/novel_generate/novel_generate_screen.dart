@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:flutter/services.dart';
 import '../../models/genre.dart';
 import '../../utils/get_generate_settings.dart';
@@ -13,6 +14,7 @@ class NovelGenerateScreen extends StatefulWidget {
 
 class _NovelGenerateScreenState extends State<NovelGenerateScreen> {
   late Future<List<GenreData>> _genreFuture; // ← Future を保持
+  late String _userId;
   String selectedGenre = 'sf';
   int selectedTime = 0;
   int selectedUnit = 1;
@@ -23,6 +25,12 @@ class _NovelGenerateScreenState extends State<NovelGenerateScreen> {
   void initState() {
     super.initState();
     _genreFuture = fetchGenreData(); // ← initState で1回だけ呼ぶ
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _userId = Provider.of<String>(context);
   }
 
   @override
@@ -205,6 +213,7 @@ class _NovelGenerateScreenState extends State<NovelGenerateScreen> {
                                     .toString(),
                                 genre: selectedGenre,
                                 style: selectedStyle,
+                                userId: _userId,
                               ),
                             ),
                           );
