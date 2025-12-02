@@ -1,23 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:novel_app/models/novel.dart';
+//import 'package:novel_app/models/novel_content.dart';
 import 'package:novel_app/utils/get_novel_content.dart';
 
 class NovelCard extends StatelessWidget {
   final Novel novel;
+  final String userId;
 
-  const NovelCard({super.key, required this.novel});
+  const NovelCard({super.key, required this.novel, required this.userId});
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
       onTap: () async {
-        print('Tapped on novel: ${novel.novelId}');
         try {
           final novelContent =
-              await GetNovelContent.fetchNovelContent(novel.novelId);
-          print('Fetched content title: ${novelContent.title}');
+              await GetNovelContent.fetchNovelContent(novel.novelId, userId);
         } catch (e) {
-          print('Failed to fetch novel content: $e');
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
