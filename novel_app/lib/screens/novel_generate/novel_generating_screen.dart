@@ -110,7 +110,9 @@ class _NovelGeneratingScreenState extends State<NovelGeneratingScreen> {
                 builder: (context) => NovelViewScreen(
                   title: snapshot.data!.title,
                   text: snapshot.data!.firstChapterText,
-                  id: snapshot.data!.novelId,
+                  novelId: snapshot.data!.novelId,
+                  finalChapterIndex: 1,
+                  totalChapterNumber: snapshot.data!.totalChapterNumber,
                 ),
               ),
             );

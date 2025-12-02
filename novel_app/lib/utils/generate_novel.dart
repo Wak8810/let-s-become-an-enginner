@@ -10,7 +10,7 @@ Future<GeneratedNovel> fetchGeneratedNovel(
 ) async {
   final url = Uri.parse('http://localhost:5000/novels/init');
   final novelData = {
-    "user_id": "e9c31a820b4d479889dafaa3f6654ef2", //現状手動で設定
+    "user_id": "e116fe527f714ba4a34f512f29196ac2", //現状手動で設定
     "novel_setting": {
       "ideal_text_length": int.parse(ideal_text_length),
       "genre": genre,
