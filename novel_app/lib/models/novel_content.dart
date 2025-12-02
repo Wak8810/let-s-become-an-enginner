@@ -12,7 +12,7 @@ class NovelContent {
     return NovelContent(
       text: json['text'],
       lastChapter: json['last_chapter'],
-      totalChapters: 0, // json['total_chapter_number'],
+      totalChapters: json['total_chapter_number'] as int? ?? 100,
     );
   }
 }
