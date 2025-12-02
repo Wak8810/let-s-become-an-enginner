@@ -1,15 +1,18 @@
 class NovelContent {
-  final String novelId;
-  final String title;
   final String text;
+  final int lastChapter;
+  final int totalChapters;
 
-  NovelContent({required this.novelId, required this.title, required this.text});
+  NovelContent(
+      {required this.text,
+      required this.lastChapter,
+      required this.totalChapters});
 
   factory NovelContent.fromJson(Map<String, dynamic> json) {
     return NovelContent(
-      novelId: json['novel_id'],
-      title: json['title'],
       text: json['text'],
+      lastChapter: json['last_chapter'],
+      totalChapters: 0, // json['total_chapter_number'],
     );
   }
 }
