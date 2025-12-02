@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
+
 from src.services.novel_generator import NovelGenerator
+
 
 class Novelist:
     """NovelGeneratorを使いやすくするためのラッパ"""
@@ -112,3 +114,6 @@ class Novelist:
     def chapter_generator(self):
         while self.next_chapter_num != self.chapter_count + 1:
             yield self.write_next_chapter()
+
+    def is_completed(self):
+        return self.next_chapter_num == self.chapter_count + 1
