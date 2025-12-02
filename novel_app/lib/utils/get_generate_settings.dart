@@ -1,9 +1,10 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import './api_config.dart';
 import '../models/genre.dart';
 
 Future<List<GenreData>> fetchGenreData() async {
-  final url = Uri.parse('http://localhost:5000/genres/');
+  final url = Uri.parse('$apiBaseUrl/genres/');
   final response = await http.get(
     url,
     headers: {'Content-Type': 'application/json'},
