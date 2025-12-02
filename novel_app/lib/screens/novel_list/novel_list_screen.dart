@@ -60,7 +60,7 @@ class _NovelListScreenState extends State<NovelListScreen> {
             return ListView.builder(
               itemCount: novels.length,
               itemBuilder: (context, index) {
-                return NovelCard(novel: novels[index]);
+                return NovelCard(novel: novels[index], userId: _userId);
               },
             );
           }
