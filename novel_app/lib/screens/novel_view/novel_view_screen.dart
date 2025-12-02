@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../utils/get_rest_novel.dart';
+import 'package:provider/provider.dart';
 
 class NovelViewScreen extends StatefulWidget {
   const NovelViewScreen({
@@ -24,8 +25,18 @@ class NovelViewScreen extends StatefulWidget {
 class _NovelViewScreenState extends State<NovelViewScreen> {
   bool isLoading = false;
   String fullText = "";
-  String userId = "";
+  late String _userId;
+  bool _isInitialized = false;
   int currentIndex = 1;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_isInitialized) {
+      _userId = Provider.of<String>(context);
+      _isInitialized = true;
+    }
+  }
 
   @override
   void initState() {
@@ -45,10 +56,11 @@ class _NovelViewScreenState extends State<NovelViewScreen> {
       final (newText, newIndex) = await fetchRestNovel(
         currentIndex,
         widget.novelId,
+        _userId,
       );
 
       setState(() {
-        fullText += '\n'+newText; // 文章を追加
+        fullText += '\n' + newText; // 文章を追加
         currentIndex = newIndex;
       });
     } finally {
