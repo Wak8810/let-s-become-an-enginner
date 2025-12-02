@@ -91,7 +91,7 @@ class _NovelListScreenState extends State<NovelListScreen> with RouteAware {
                   itemBuilder: (context, index) {
                     // 作成日で小説をソート（新しいものが先頭）。
                     _novels!.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-                    return NovelCard(novel: _novels![index]);
+                    return NovelCard(novel: _novels![index], userId: _userId);
                   },
                 ),
       floatingActionButton: const GenerateNovelScreen(),
