@@ -170,6 +170,8 @@ novel_content_model = api.model(
     "NovelContent",
     {
         "novel_status": fields.String(),
+        "current_chapter": fields.Integer(description="現在生成中または失敗した章番号"),
+        "total_chapter_number": fields.Integer(description="全章数"),
         "new_chapters": fields.List(
             fields.Nested(api.model("Chapter", {"index": fields.Integer(), "content": fields.String()}))
         ),
@@ -185,7 +187,13 @@ chapter_item_model = api.model(
     },
 )
 novel_text_model = api.model(
-    "NovelText", {"text": fields.String(), "last_chapter": fields.Integer(), "has_all_chapters": fields.Boolean()}
+    "NovelText",
+    {
+        "text": fields.String(),
+        "last_chapter": fields.Integer(),
+        "total_chapter_number": fields.Integer(description="全章数"),
+        "has_all_chapters": fields.Boolean(),
+    },
 )
 # -- parser --
 novels_text_parser = reqparse.RequestParser()
@@ -364,13 +372,28 @@ class NovelContent(Resource):
             api.abort(403, "You do not have permission to access this novel")
 
         chapters = db.session.query(Chapter).filter_by(novel_id=novel_id).order_by(Chapter.chapter_number).all()
+
+        # 現在生成中または失敗した章番号を特定
+        current_chapter = None
+        for chapter in chapters:
+            if chapter.status in [NovelStatus.GENERATING, NovelStatus.FAILED]:
+                current_chapter = chapter.chapter_number
+                break
+
+        # 完成した章のみを順番に返す
         results = []
         for i in range(current_index, len(chapters)):
             if chapters[i].status == NovelStatus.COMPLETED:
                 results.append({"index": i + 1, "content": chapters[i].content})
             else:
                 break
-        return {"novel_status": novel.status.name, "new_chapters": results}
+
+        return {
+            "novel_status": novel.status.name,
+            "current_chapter": current_chapter or len(chapters),
+            "total_chapter_number": len(chapters),
+            "new_chapters": results,
+        }
 
 
 @api.route("/init")
@@ -511,4 +534,9 @@ class NovelText(Resource):
                 break
             text += chapter.content + "\n"
             count += 1
-        return {"text": text, "last_chapter": count, "has_all_chapters": count == len(chapters)}
+        return {
+            "text": text,
+            "last_chapter": count,
+            "total_chapter_number": len(chapters),
+            "has_all_chapters": count == len(chapters),
+        }
