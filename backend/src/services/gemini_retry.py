@@ -5,6 +5,7 @@
 """
 
 import logging
+import random
 import time
 from functools import wraps
 from typing import Callable, Tuple, Type
@@ -123,8 +124,6 @@ def retry_on_error(
 
                         # ジッターを追加（衝突回避）
                         if jitter:
-                            import random
-
                             wait_time = wait_time * (0.5 + random.random())
 
                         logger.warning(
