@@ -8,6 +8,7 @@ from flask_restx import Namespace, Resource, fields, reqparse
 
 from src.database import db
 from src.models import Chapter, Genre, Novel, NovelStatus, User
+from src.services.error_handler import handle_chapter_generation_failure, mark_novel_as_failed
 from src.services.novel_generator import NovelGenerator  # ここでこれを使わないほうが綺麗だが必須ではない.
 from src.services.novelist import Novelist
 
@@ -32,54 +33,97 @@ def list_finder(tar_list, compare_func):
 # -- threading --
 # バックエンドタスク.
 def novelist_bg_task_runner(novelist, novel_id):
+    """バックグラウンドで小説の章を順次生成するタスク
+
+    第2章以降を順番に生成し、データベースに保存します。
+    エラーが発生した場合は生成を停止し、適切にステータスを更新します。
+
+    Args:
+        novelist: Novelistインスタンス
+        novel_id: 小説のID
+    """
     print("bg task started")
     from app import app
 
     if not isinstance(novelist, Novelist):
         return
+
     with app.app_context():
-        chapters_data = db.session.query(Chapter).filter_by(novel_id=novel_id).all()
-        # db のステータス更新.
-        novel_data = db.session.get(Novel, novel_id)
-        if not novel_data:
-            # novelのdbが見つからなければエラー終了.
-            print(f"bg:: error : novel not found -> task killed - id:{novel_id}")
-            return
-        novel_data.status = NovelStatus.GENERATING
-        db.session.commit()
-        # 生成.
-        while not novelist.is_completed():
-            # 対象chapterの探索.
-            chpind = list_finder(chapters_data, lambda x: x.chapter_number == novelist.next_chapter_num)
-            chapter = None
-            if chpind == -1:
-                # なければ生成する.
-                print(f"bg:: warning: generated chapter but data not found - number:{novelist.next_chapter_num}")
-                new_chapter = Chapter(
-                    chapter_number=novelist.next_chapter_num - 1,
-                    content="NO CONTENT",
+        try:
+            chapters_data = db.session.query(Chapter).filter_by(novel_id=novel_id).all()
+
+            # 小説のステータスをGENERATINGに更新
+            novel_data = db.session.get(Novel, novel_id)
+            if not novel_data:
+                print(f"bg:: error : novel not found -> task killed - id:{novel_id}")
+                return
+
+            novel_data.status = NovelStatus.GENERATING
+            db.session.commit()
+
+            # 章を順次生成
+            while not novelist.is_completed():
+                # 対象chapterの探索
+                chpind = list_finder(chapters_data, lambda x: x.chapter_number == novelist.next_chapter_num)
+                chapter = None
+
+                if chpind == -1:
+                    # チャプターがDBに存在しない場合は作成（通常は発生しないはず）
+                    print(f"bg:: warning: generated chapter but data not found - number:{novelist.next_chapter_num}")
+                    new_chapter = Chapter(
+                        chapter_number=novelist.next_chapter_num,
+                        content="NO CONTENT",
+                        novel_id=novel_id,
+                        status=NovelStatus.GENERATING,
+                        plot=novelist.chapter_plots[novelist.next_chapter_num - 1],
+                    )
+                    db.session.add(new_chapter)
+                    chapter = new_chapter
+                else:
+                    chapter = chapters_data[chpind]
+
+                # チャプターのステータスをGENERATINGに更新
+                chapter.status = NovelStatus.GENERATING
+                db.session.commit()
+
+                # 章を生成（エラーは上位でキャッチ）
+                try:
+                    print(f"bg:: start generating chapter: {novelist.next_chapter_num}")
+                    chapter_content = novelist.write_next_chapter()
+                    chapter.content = chapter_content
+                    chapter.status = NovelStatus.COMPLETED
+                    db.session.commit()
+                    print("bg:: chapter generated and commited")
+
+                except Exception as e:
+                    # 章の生成が完全に失敗した場合
+                    print(f"bg:: error: chapter generation failed - {type(e).__name__}: {e}")
+                    handle_chapter_generation_failure(
+                        novel_id=novel_id, chapter_id=chapter.id, error=e, db_session=db.session
+                    )
+                    print("bg:: task stopped due to chapter generation failure")
+                    return  # 生成を停止
+
+            # 全章完了
+            novel_data.status = NovelStatus.COMPLETED
+            db.session.commit()
+            print("bg:: novel commited, task done")
+
+        except Exception as e:
+            # タスク全体のエラー（DB接続エラーなど）
+            print(f"bg:: critical error: background task failed - {type(e).__name__}: {e}")
+            try:
+                # 小説をFAILEDにマーク
+                mark_novel_as_failed(
                     novel_id=novel_id,
-                    status=NovelStatus.GENERATING,
-                    plot=novelist.chapter_plots[novelist.next_chapter_num - 2],
+                    error_message=f"Background task failed: {str(e)}",
+                    error_type=type(e).__name__,
+                    db_session=db.session,
                 )
-                db.session.add(new_chapter)
-                chapter = new_chapter
-            else:
-                chapter = chapters_data[chpind]
-            # GENERATING 更新.
-            chapter.status = NovelStatus.GENERATING
-            db.session.commit()
-            # 生成.
-            print(f"bg:: start generating chapter: {novelist.next_chapter_num}")
-            chapter_content = novelist.write_next_chapter()
-            chapter.content = chapter_content
-            chapter.status = NovelStatus.COMPLETED
-            db.session.commit()
-            print("bg:: chapter generated and commited")
-        # novel 更新.
-        novel_data.status = NovelStatus.COMPLETED
-        db.session.commit()
-        print("bg:: novel commited, task done")
+            except Exception as mark_error:
+                # エラー処理自体が失敗しても無視
+                print(f"bg:: error: failed to mark novel as failed - {mark_error}")
+            print("bg:: task terminated due to critical error")
 
 
 # --- model ---
