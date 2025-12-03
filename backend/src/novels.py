@@ -727,4 +727,4 @@ class NovelRetries(Resource):
             # api.abort以外の例外をキャッチ
             if hasattr(e, "code"):
                 raise
-            return {"error": str(e)}, 500
+            api.abort(500, str(e))
