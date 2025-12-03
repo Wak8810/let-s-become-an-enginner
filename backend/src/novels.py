@@ -440,7 +440,7 @@ class NovelContent(Resource):
 
         return {
             "novel_status": novel.status.name,
-            "current_chapter": current_chapter or len(chapters),
+            "current_chapter": current_chapter,
             "total_chapter_number": len(chapters),
             "new_chapters": results,
         }
