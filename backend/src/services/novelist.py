@@ -159,19 +159,30 @@ class Novelist:
         内部状態（next_chapter_num、previous_chapter_content）は変更しません。
         リトライエンドポイントから呼び出されることを想定しています。
 
+        重要: 第2章以降をリトライする場合は、previous_contentを明示的に指定する必要があります。
+        指定しない場合、前章の内容なしで生成されるため、ストーリーの連続性が失われる可能性があります。
+
         Args:
             chapter_number: 再生成する章の番号（1から始まる）
-            previous_content: 前の章の内容（Noneの場合は自動判定）
+            previous_content: 前の章の内容
+                - 第1章の場合: Noneを指定（または省略可）
+                - 第2章以降の場合: 必ず前の章の内容を指定すること
 
         Returns:
             str: 生成された章の内容
 
         Raises:
-            ValueError: 章番号が不正な場合
+            ValueError: 章番号が不正な場合、または第2章以降でprevious_contentが未指定の場合
             GeminiAPIError: 生成に失敗した場合
 
         Example:
-            >>> # 第3章が失敗した場合の再生成
+            >>> # 第1章の再生成
+            >>> content = novelist.retry_failed_chapter(
+            ...     chapter_number=1,
+            ...     previous_content=None
+            ... )
+            >>>
+            >>> # 第3章の再生成（前章の内容を必ず渡す）
             >>> content = novelist.retry_failed_chapter(
             ...     chapter_number=3,
             ...     previous_content=chapter2_content
@@ -181,13 +192,18 @@ class Novelist:
             raise ValueError(f"Invalid chapter number: {chapter_number}. Must be between 1 and {self.chapter_count}")
 
         # 前の章の内容を決定
-        if previous_content is not None:
-            prev = previous_content
-        elif chapter_number == 1:
+        if chapter_number == 1:
+            # 第1章の場合は前章なし
             prev = None
+        elif previous_content is not None:
+            # 明示的に指定された場合
+            prev = previous_content
         else:
-            # 前の章の内容が提供されていない場合は内部状態を使用
-            prev = self.previous_chapter_content if self.next_chapter_num > chapter_number else None
+            # 第2章以降でprevious_contentが指定されていない場合はエラー
+            raise ValueError(
+                f"Chapter {chapter_number} requires previous_content to be specified. "
+                f"Please provide the content of chapter {chapter_number - 1} to maintain story continuity."
+            )
 
         # 章を生成（エラーは上位に伝播）
         content = self.generator.generate_chapter(
