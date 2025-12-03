@@ -82,7 +82,7 @@ def novelist_bg_task_runner(novelist, novel_id, start_from_chapter=None):
                         f"Background task: Chapter data not found in DB, creating new - Chapter: {novelist.next_chapter_num}"
                     )
                     new_chapter = Chapter(
-                        chapter_number=novelist.next_chapter_num - 1,
+                        chapter_number=novelist.next_chapter_num,
                         content="NO CONTENT",
                         novel_id=novel_id,
                         status=NovelStatus.GENERATING,
