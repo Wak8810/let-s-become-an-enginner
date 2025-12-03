@@ -418,8 +418,10 @@ def _validate_schema(data: dict, schema: dict, context_msg: str) -> None:
                     _validate_schema(item, item_schema, f"{context_msg} in {key}[{i}]")
                 except InvalidJSONError as e:
                     # リストアイテムのエラーに親キー情報を追加
-                    e.missing_keys = [f"{key}[{i}].{mk}" for mk in e.missing_keys]
-                    raise
+                    raise InvalidJSONError(
+                        message=e.message,
+                        missing_keys=[f"{key}[{i}].{mk}" for mk in (e.missing_keys or [])],
+                    )
 
     # 必須キーが欠けている場合
     if missing_keys:
