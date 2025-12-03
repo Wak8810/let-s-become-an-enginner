@@ -112,7 +112,7 @@ class Novelist:
         self.init_data = init_data_json
 
         # 各フィールドを復元
-        self.plot = generated.get("plot", "")
+        self.plot = generated["plot"]
         self.chapter_plots = generated.get("chapter_plots", [])
         self.other_novel_data = {k: v for k, v in generated.items() if k not in ["plot", "chapter_plots"]}
         self.chapter_count = len(self.chapter_plots)
