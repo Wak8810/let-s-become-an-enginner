@@ -60,7 +60,9 @@ class _NovelViewScreenState extends State<NovelViewScreen> {
       );
 
       setState(() {
-        fullText += '\n' + newText; // 文章を追加
+        if (newText != "") {
+          fullText += '\n' + newText; // 文章を追加
+        }
         currentIndex = newIndex;
       });
     } finally {
@@ -103,8 +105,7 @@ class _NovelViewScreenState extends State<NovelViewScreen> {
 
                     isLoading
                         ? const Center(child: CircularProgressIndicator())
-                        : (currentIndex >=
-                                  widget.totalChapterNumber
+                        : (currentIndex >= widget.totalChapterNumber
                               ? const SizedBox() // ← 何も表示しない
                               : ElevatedButton(
                                   onPressed: _loadMore,
