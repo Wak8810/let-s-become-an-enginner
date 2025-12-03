@@ -1,10 +1,11 @@
 import 'package:http/http.dart' as http;
+import './api_config.dart';
 import 'dart:convert';
 
-Future<String> fetchApiData() async {
-  final url = Uri.parse('http://localhost:5000/novels/init');
+Future<String> fetchApiData(String userId) async {
+  final url = Uri.parse('$apiBaseUrl/novels/init');
   final novelData = {
-    "user_id": "e116fe527f714ba4a34f512f29196ac2",
+    "user_id": userId,
     "novel_setting": {
       "ideal_text_length": 400,
       "genre": "sf",

@@ -1,7 +1,7 @@
 class GeneratedNovel {
   final String title;
   final String firstChapterText;
-  int totalChapterNumber;
+  final int totalChapterNumber;
   final String novelId;
 
   GeneratedNovel({

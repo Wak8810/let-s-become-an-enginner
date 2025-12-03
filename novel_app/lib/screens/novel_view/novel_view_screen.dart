@@ -1,24 +1,69 @@
 import 'package:flutter/material.dart';
-import 'widgets/novel_scroll.dart';
+import '../../utils/get_rest_novel.dart';
 
-class NovelViewScreen extends StatelessWidget {
+class NovelViewScreen extends StatefulWidget {
   const NovelViewScreen({
     super.key,
     required this.title,
     required this.text,
-    required this.id,
+    required this.novelId,
+    required this.finalChapterIndex,
+    required this.totalChapterNumber,
   });
 
   final String title;
   final String text;
-  final String id;
+  final String novelId;
+  final int finalChapterIndex;
+  final int totalChapterNumber;
+
+  @override
+  State<NovelViewScreen> createState() => _NovelViewScreenState();
+}
+
+class _NovelViewScreenState extends State<NovelViewScreen> {
+  bool isLoading = false;
+  String fullText = "";
+  String userId = "";
+  int currentIndex = 1;
+
+  @override
+  void initState() {
+    super.initState();
+    fullText = widget.text;
+    currentIndex = widget.finalChapterIndex;
+  }
+
+  Future<void> _loadMore() async {
+    if (isLoading) return; // 連打防止
+
+    setState(() {
+      isLoading = true; // ボタンを消してクルクル開始
+    });
+
+    try {
+      final (newText, newIndex) = await fetchRestNovel(
+        currentIndex,
+        widget.novelId,
+      );
+
+      setState(() {
+        fullText += '\n'+newText; // 文章を追加
+        currentIndex = newIndex;
+      });
+    } finally {
+      setState(() {
+        isLoading = false; // ローディング終了
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text('閲覧ページ'),
+        title: const Text('閲覧ページ'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -26,13 +71,37 @@ class NovelViewScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              title,
+              widget.title,
               style: Theme.of(
                 context,
               ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            Expanded(child: NovelScroll(text: text)),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      fullText,
+                      style: const TextStyle(fontSize: 16, height: 1.6),
+                    ),
+                    const SizedBox(height: 20),
+
+                    isLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : (currentIndex >=
+                                  widget.totalChapterNumber
+                              ? const SizedBox() // ← 何も表示しない
+                              : ElevatedButton(
+                                  onPressed: _loadMore,
+                                  child: const Text("続きを読み込む"),
+                                )),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),

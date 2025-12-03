@@ -1,16 +1,17 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import '../models/novel.dart';
+import './api_config.dart';
 import '../models/generated_novel.dart';
 
 Future<GeneratedNovel> fetchGeneratedNovel(
   String ideal_text_length,
   String genre,
   String style,
+  String userId,
 ) async {
-  final url = Uri.parse('http://localhost:5000/novels/init');
+  final url = Uri.parse('$apiBaseUrl/novels/init');
   final novelData = {
-    "user_id": "e9c31a820b4d479889dafaa3f6654ef2", //現状手動で設定
+    "user_id": userId,
     "novel_setting": {
       "ideal_text_length": int.parse(ideal_text_length),
       "genre": genre,

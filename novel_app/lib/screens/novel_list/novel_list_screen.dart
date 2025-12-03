@@ -3,6 +3,7 @@ import 'package:novel_app/utils/get_user_all_novels.dart';
 import 'package:novel_app/screens/novel_list/widgets/novel_card.dart';
 import 'package:novel_app/models/novel.dart';
 import 'package:novel_app/widgets/generate_novel_screen_button.dart';
+import 'package:provider/provider.dart';
 
 class NovelListScreen extends StatefulWidget {
   const NovelListScreen({super.key});
@@ -13,16 +14,18 @@ class NovelListScreen extends StatefulWidget {
 
 class _NovelListScreenState extends State<NovelListScreen> {
   Future<List<Novel>>? _novels;
+  late String _userId;
 
   @override
-  void initState() {
-    super.initState();
-    _novels = GetUserAllNovels.fetchNovels();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _userId = Provider.of<String>(context);
+    _novels = GetUserAllNovels.fetchNovels(_userId);
   }
 
   Future<void> _refreshNovels() async {
     setState(() {
-      _novels = GetUserAllNovels.fetchNovels();
+      _novels = GetUserAllNovels.fetchNovels(_userId);
     });
   }
 
@@ -57,7 +60,7 @@ class _NovelListScreenState extends State<NovelListScreen> {
             return ListView.builder(
               itemCount: novels.length,
               itemBuilder: (context, index) {
-                return NovelCard(novel: novels[index]);
+                return NovelCard(novel: novels[index], userId: _userId);
               },
             );
           }
