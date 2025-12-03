@@ -59,14 +59,14 @@ def mark_novel_as_failed(
 
         # 小説のステータスを更新
         novel.status = NovelStatus.FAILED
-        novel.updated_at = datetime.now()
+        novel.updated_at = datetime.now(timezone.utc)
 
         # 特定の章が失敗した場合、その章だけをFAILEDにする
         if failed_chapter_id:
             failed_chapter = session.get(Chapter, failed_chapter_id)
             if failed_chapter:
                 failed_chapter.status = NovelStatus.FAILED
-                failed_chapter.updated_at = datetime.now()
+                failed_chapter.updated_at = datetime.now(timezone.utc)
                 failed_chapter_number = failed_chapter.chapter_number
             else:
                 logger.warning(f"Failed chapter not found: {failed_chapter_id}")
@@ -132,7 +132,7 @@ def mark_chapter_as_failed(
 
         # チャプターのステータスを更新
         chapter.status = NovelStatus.FAILED
-        chapter.updated_at = datetime.now()
+        chapter.updated_at = datetime.now(timezone.utc)
 
         session.commit()
 
@@ -183,7 +183,7 @@ def recover_novel_status(novel_id: str, new_status: NovelStatus = NovelStatus.GE
 
         old_status = novel.status
         novel.status = new_status
-        novel.updated_at = datetime.now()
+        novel.updated_at = datetime.now(timezone.utc)
 
         session.commit()
 
@@ -230,7 +230,7 @@ def recover_chapter_status(chapter_id: str, new_status: NovelStatus = NovelStatu
 
         old_status = chapter.status
         chapter.status = new_status
-        chapter.updated_at = datetime.now()
+        chapter.updated_at = datetime.now(timezone.utc)
 
         session.commit()
 
@@ -427,7 +427,7 @@ def update_chapter_status(chapter_id: str, status: NovelStatus, db_session=None)
 
         old_status = chapter.status
         chapter.status = status
-        chapter.updated_at = datetime.now()
+        chapter.updated_at = datetime.now(timezone.utc)
 
         session.commit()
 
@@ -473,7 +473,7 @@ def update_novel_status(novel_id: str, status: NovelStatus, db_session=None) -> 
 
         old_status = novel.status
         novel.status = status
-        novel.updated_at = datetime.now()
+        novel.updated_at = datetime.now(timezone.utc)
 
         session.commit()
 
