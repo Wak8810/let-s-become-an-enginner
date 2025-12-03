@@ -1,13 +1,13 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-
-String userId = 'e116fe527f714ba4a34f512f29196ac2';
+import 'package:novel_app/utils/api_config.dart';
 
 Future<(String,int)> fetchRestNovel(
   int finalChapterIndex, //現在の最終チャプター番号
   String novelId,
+  String userId,
 ) async {
-  final url = Uri.parse('http://localhost:5000/novels/$novelId/contents');
+  final url = Uri.parse('$apiBaseUrl/novels/$novelId/contents');
   
   final response = await http.get(
     url,
