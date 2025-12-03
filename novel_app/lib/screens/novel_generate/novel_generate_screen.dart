@@ -148,10 +148,14 @@ class _NovelGenerateScreenState extends State<NovelGenerateScreen> {
                               ],
                               onChanged: (value) {
                                 setState(() {
-                                  selectedTime = int.parse(value);
+                                  if (int.tryParse(value) != null) {
+                                    selectedTime = int.parse(value);
+                                  } else {
+                                    selectedTime = 0;
+                                  }
                                   canSubmit =
                                       (selectedTime != null &&
-                                      selectedTime >= 0);
+                                      selectedTime > 0);
                                 });
                               },
                               decoration: InputDecoration(
