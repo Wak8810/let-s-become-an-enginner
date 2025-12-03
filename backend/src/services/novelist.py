@@ -99,6 +99,51 @@ class Novelist:
                 f"AIが生成した章の数 {len(self.chapter_plots)}"
             )
 
+    def load_from_init_data(self, init_data_json: str):
+        """既存のinit_dataから小説の状態を復元する
+
+        データベースに保存されているinit_data（JSON文字列）から
+        小説の基本情報を読み込み、Novelistの内部状態を復元します。
+        next_chapter_numとprevious_chapter_contentは呼び出し側で設定する必要があります。
+
+        Args:
+            init_data_json: JSON文字列形式のinit_data
+
+        Raises:
+            json.JSONDecodeError: JSONのパースに失敗した場合
+            KeyError: 必須キーが存在しない場合
+            ValueError: チャプター数とプロット数に不整合がある場合
+
+        Example:
+            >>> novelist = Novelist()
+            >>> novelist.load_from_init_data(novel_data.init_data)
+            >>> novelist.next_chapter_num = 3  # 第3章から再開する場合
+            >>> novelist.previous_chapter_content = chapter2_content
+        """
+        # JSON文字列をパース
+        generated = json.loads(init_data_json)
+
+        # 必須キーの確認
+        if "plot" not in generated:
+            raise KeyError("Missing required key 'plot' in init_data")
+        if "chapter_plots" not in generated:
+            raise KeyError("Missing required key 'chapter_plots' in init_data")
+
+        # init_dataを保存
+        self.init_data = init_data_json
+
+        # 各フィールドを復元
+        self.plot = generated.get("plot", "")
+        self.chapter_plots = generated.get("chapter_plots", [])
+        self.other_novel_data = {k: v for k, v in generated.items() if k not in ["plot", "chapter_plots"]}
+        self.chapter_count = len(self.chapter_plots)
+
+        # チャプター数の検証
+        if self.chapter_count <= 0:
+            raise ValueError(f"Invalid chapter count: {self.chapter_count}")
+
+        self.log(["Loaded from init_data: ", f"{self.chapter_count} chapters\n"])
+
     def write_next_chapter(self):
         """チャプターを一つ生成
 

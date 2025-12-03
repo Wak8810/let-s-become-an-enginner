@@ -72,6 +72,8 @@ class Novel(db.Model):
     true_text_length = db.Column(db.Integer, nullable=True)
     # ステータス (Enum)
     status = db.Column(db.Enum(NovelStatus), nullable=False, default=NovelStatus.PENDING)
+    # init_data: Novelistのprepare_novel()で生成されたJSON
+    init_data = db.Column(db.Text, nullable=True)
 
     # リレーション: 小説は複数のチャプターを持つ
     chapters = db.relationship("Chapter", backref="novel", lazy=True, cascade="all, delete-orphan")

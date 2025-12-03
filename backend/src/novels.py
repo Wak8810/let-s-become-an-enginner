@@ -32,15 +32,20 @@ def list_finder(tar_list, compare_func):
 
 # -- threading --
 # バックエンドタスク.
-def novelist_bg_task_runner(novelist, novel_id):
+def novelist_bg_task_runner(novelist, novel_id, start_from_chapter=None):
     """バックグラウンドで小説の章を順次生成するタスク
 
-    第2章以降を順番に生成し、データベースに保存します。
+    指定された章から順番に生成し、データベースに保存します。
     エラーが発生した場合は生成を停止し、適切にステータスを更新します。
 
     Args:
         novelist: Novelistインスタンス
         novel_id: 小説のID
+        start_from_chapter: 生成を開始する章番号（Noneの場合はnovelist.next_chapter_numから開始）
+
+    Note:
+        start_from_chapterを指定した場合、novelist.next_chapter_numを上書きします。
+        これにより、リトライ時に特定の章から生成を再開できます。
     """
     print("bg task started")
     from app import app
@@ -49,6 +54,10 @@ def novelist_bg_task_runner(novelist, novel_id):
         return
 
     with app.app_context():
+        # 開始章が指定されている場合は、novelistの内部状態を更新
+        if start_from_chapter is not None:
+            novelist.next_chapter_num = start_from_chapter
+            print(f"bg:: resuming from chapter {start_from_chapter}")
         try:
             chapters_data = db.session.query(Chapter).filter_by(novel_id=novel_id).all()
 
@@ -193,6 +202,20 @@ novel_text_model = api.model(
         "last_chapter": fields.Integer(),
         "total_chapter_number": fields.Integer(description="全章数"),
         "has_all_chapters": fields.Boolean(),
+    },
+)
+novel_retry_request_model = api.model(
+    "NovelRetryRequest",
+    {
+        "user_id": fields.String(required=True, description="ユーザーID"),
+    },
+)
+novel_retry_response_model = api.model(
+    "NovelRetryResponse",
+    {
+        "novel_id": fields.String(),
+        "retried_chapter": fields.Integer(),
+        "chapter_content": fields.String(),
     },
 )
 # -- parser --
@@ -452,6 +475,7 @@ class NovelInit(Resource):
                 user_id=user_data.id,
                 status=NovelStatus.GENERATING,
                 true_text_length=0,
+                init_data=novelist.init_data,  # リトライ時のために保存
             )
             db.session.add(novel_data)
             db.session.commit()
@@ -540,3 +564,151 @@ class NovelText(Resource):
             "total_chapter_number": len(chapters),
             "has_all_chapters": count == len(chapters),
         }
+
+
+@api.route("/<string:novel_id>/retries")
+class NovelRetries(Resource):
+    @api.doc("post_retry", params={"novel_id": "小説のID"})
+    @api.expect(novel_retry_request_model)
+    @api.marshal_with(novel_retry_response_model)
+    def post(self, novel_id):
+        """失敗した小説の生成を再開する
+
+        FAILEDステータスの小説から最初のFAILED章を特定し、
+        retry_failed_chapter()を使って再生成します。
+        成功後はバックグラウンドタスクで後続章を生成します。
+
+        Args:
+            novel_id (string): 小説のID
+
+        Request Body:
+            user_id (string): ユーザーID
+
+        Returns:
+            dict: {
+                novel_id: 小説ID,
+                retried_chapter: 再生成した章番号,
+                chapter_content: 生成された章の内容
+            }
+
+        Errors:
+            400: リクエストボディが不正、小説がFAILED状態でない、またはFAILED章が見つからない
+            403: ユーザー権限なし
+            404: 小説が見つからない、ユーザーが見つからない
+            500: 章の再生成失敗
+        """
+        try:
+            # リクエストボディからuser_idを取得
+            requested_param = request.get_json()
+            if not requested_param:
+                api.abort(400, "Request body is required")
+
+            user_id = requested_param.get("user_id")
+
+            # 認証情報チェック
+            if not user_id:
+                api.abort(400, "'user_id' is required in request body")
+
+            # 小説の取得
+            novel = db.session.get(Novel, novel_id)
+            if not novel:
+                api.abort(404, f"Novel not found - id:{novel_id}")
+
+            # ユーザー権限チェック
+            if novel.user_id != user_id:
+                api.abort(403, "You do not have permission to access this novel")
+
+            # FAILED状態のチェック
+            if novel.status != NovelStatus.FAILED:
+                api.abort(400, f"Novel is not in FAILED state. Current status: {novel.status.name}")
+
+            # init_dataの存在チェック
+            if not novel.init_data:
+                api.abort(500, "Novel init_data not found. Cannot retry generation.")
+
+            # 全チャプターを取得
+            chapters = db.session.query(Chapter).filter_by(novel_id=novel_id).order_by(Chapter.chapter_number).all()
+
+            # 最初のFAILED章を特定
+            failed_chapter = None
+            for chapter in chapters:
+                if chapter.status == NovelStatus.FAILED:
+                    failed_chapter = chapter
+                    break
+
+            if not failed_chapter:
+                api.abort(400, "No FAILED chapter found in this novel")
+
+            logger.info(f"Retrying chapter {failed_chapter.chapter_number} for novel {novel_id}")
+
+            # 前章の内容を取得（第1章の場合はNone）
+            previous_content = None
+            if failed_chapter.chapter_number > 1:
+                previous_chapter = (
+                    db.session.query(Chapter)
+                    .filter_by(novel_id=novel_id, chapter_number=failed_chapter.chapter_number - 1)
+                    .first()
+                )
+                if previous_chapter and previous_chapter.status == NovelStatus.COMPLETED:
+                    previous_content = previous_chapter.content
+                else:
+                    api.abort(
+                        500,
+                        f"Previous chapter (#{failed_chapter.chapter_number - 1}) is not completed. "
+                        "Cannot retry from this chapter.",
+                    )
+
+            # Novelistを再構築
+            novelist = Novelist()
+            novelist.load_from_init_data(novel.init_data)
+            novelist.target_text_length = novel.text_length
+            novelist.other_settings = {"style": novel.style, "genre": novel.genre_code}
+
+            # 失敗した章を再生成
+            failed_chapter.status = NovelStatus.GENERATING
+            db.session.commit()
+
+            chapter_content = novelist.retry_failed_chapter(
+                chapter_number=failed_chapter.chapter_number, previous_content=previous_content
+            )
+
+            # データベース更新
+            failed_chapter.content = chapter_content
+            failed_chapter.status = NovelStatus.COMPLETED
+            novel.status = NovelStatus.GENERATING
+            db.session.commit()
+
+            logger.info(f"Chapter {failed_chapter.chapter_number} successfully regenerated")
+
+            # 後続章の生成を再開
+            # next_chapter_numとprevious_chapter_contentを設定
+            novelist.next_chapter_num = failed_chapter.chapter_number + 1
+            novelist.previous_chapter_content = chapter_content
+
+            # バックグラウンドタスクを起動
+            if novelist.next_chapter_num <= novelist.chapter_count:
+                trd = threading.Thread(
+                    target=novelist_bg_task_runner,
+                    args=(novelist, novel_id, novelist.next_chapter_num),
+                )
+                trd.daemon = False
+                trd.start()
+                logger.info(f"Background task restarted from chapter {novelist.next_chapter_num}")
+            else:
+                # すでに全章完了している場合
+                novel.status = NovelStatus.COMPLETED
+                db.session.commit()
+                logger.info("All chapters completed")
+
+            return {
+                "novel_id": novel_id,
+                "retried_chapter": failed_chapter.chapter_number,
+                "chapter_content": chapter_content,
+            }, 200
+
+        except Exception as e:
+            logger.error(f"Error retrying novel {novel_id}: {type(e).__name__}: {e}")
+            # api.abort以外の例外をキャッチ
+            if hasattr(e, "code"):
+                raise
+            return {"error": str(e)}, 500
