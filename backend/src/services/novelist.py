@@ -1,8 +1,11 @@
 import json
-from pathlib import Path
+import logging
 from typing import Optional
 
 from src.services.novel_generator import NovelGenerator
+
+# ロガーの設定
+logger = logging.getLogger(__name__)
 
 
 class Novelist:
@@ -26,30 +29,6 @@ class Novelist:
         # other その他はディクショナリ.
         self.other_settings = {}
         self.other_novel_data = {}
-
-    # debug
-    def log(self, log):
-        """logの記録 - debug
-
-        Args:
-            log (str or list(str)): log
-        """
-        # ログディレクトリとファイルを安全に解決
-        log_dir = Path(__file__).resolve().parent.parent / "logs"
-        try:
-            log_dir.mkdir(parents=True, exist_ok=True)
-        except Exception:
-            pass
-        log_file = log_dir / "novelist.log"
-        try:
-            with log_file.open("a", encoding="utf-8") as f:
-                if isinstance(log, str):
-                    f.write(log)
-                else:
-                    for text in log:
-                        f.write(text)
-        except Exception:
-            pass
 
     def calc_chapter_count(self, text_length):
         # 4000未満->1 , 4000以上->textLen/2000
@@ -85,7 +64,7 @@ class Novelist:
 
         # ログ用にJSON文字列化
         self.init_data = json.dumps(generated, ensure_ascii=False, indent=2)
-        self.log(["generated initial data :\n", self.init_data, "\n"])
+        logger.debug(f"Generated initial data:\n{self.init_data}")
 
         self.plot = generated.get("plot", "")
         self.chapter_plots = generated.get("chapter_plots", [])
@@ -142,7 +121,7 @@ class Novelist:
         if self.chapter_count <= 0:
             raise ValueError(f"Invalid chapter count: {self.chapter_count}")
 
-        self.log(["Loaded from init_data: ", f"{self.chapter_count} chapters\n"])
+        logger.info(f"Loaded from init_data: {self.chapter_count} chapters")
 
     def write_next_chapter(self):
         """チャプターを一つ生成
@@ -165,16 +144,11 @@ class Novelist:
         )
         self.next_chapter_num += 1
         self.total_text_length += len(self.previous_chapter_content)
-        self.log(
-            [
-                "generated chapter - next:",
-                str(self.next_chapter_num),
-                ", total text: ",
-                str(self.total_text_length),
-                ", chapter:\n",
-                self.previous_chapter_content,
-                "\n",
-            ]
+        logger.debug(
+            f"Generated chapter - "
+            f"Next: {self.next_chapter_num}, "
+            f"Total text length: {self.total_text_length}, "
+            f"Chapter length: {len(self.previous_chapter_content)}"
         )
         return self.previous_chapter_content
 
@@ -223,7 +197,7 @@ class Novelist:
             chapter_num=chapter_number,
         )
 
-        self.log([f"Retried chapter {chapter_number} - ", f"length: {len(content)}\n", content, "\n"])
+        logger.info(f"Retried chapter {chapter_number} - Length: {len(content)}")
 
         return content
 

@@ -47,7 +47,7 @@ def novelist_bg_task_runner(novelist, novel_id, start_from_chapter=None):
         start_from_chapterを指定した場合、novelist.next_chapter_numを上書きします。
         これにより、リトライ時に特定の章から生成を再開できます。
     """
-    print("bg task started")
+    logger.info("Background task started")
     from app import app
 
     if not isinstance(novelist, Novelist):
@@ -57,14 +57,14 @@ def novelist_bg_task_runner(novelist, novel_id, start_from_chapter=None):
         # 開始章が指定されている場合は、novelistの内部状態を更新
         if start_from_chapter is not None:
             novelist.next_chapter_num = start_from_chapter
-            print(f"bg:: resuming from chapter {start_from_chapter}")
+            logger.info(f"Background task: Resuming from chapter {start_from_chapter}")
         try:
             chapters_data = db.session.query(Chapter).filter_by(novel_id=novel_id).all()
 
             # 小説のステータスをGENERATINGに更新
             novel_data = db.session.get(Novel, novel_id)
             if not novel_data:
-                print(f"bg:: error : novel not found -> task killed - id:{novel_id}")
+                logger.error(f"Background task: Novel not found, task terminated - ID: {novel_id}")
                 return
 
             novel_data.status = NovelStatus.GENERATING
@@ -78,7 +78,9 @@ def novelist_bg_task_runner(novelist, novel_id, start_from_chapter=None):
 
                 if chpind == -1:
                     # チャプターがDBに存在しない場合は作成（通常は発生しないはず）
-                    print(f"bg:: warning: generated chapter but data not found - number:{novelist.next_chapter_num}")
+                    logger.warning(
+                        f"Background task: Chapter data not found in DB, creating new - Chapter: {novelist.next_chapter_num}"
+                    )
                     new_chapter = Chapter(
                         chapter_number=novelist.next_chapter_num,
                         content="NO CONTENT",
@@ -97,30 +99,32 @@ def novelist_bg_task_runner(novelist, novel_id, start_from_chapter=None):
 
                 # 章を生成（エラーは上位でキャッチ）
                 try:
-                    print(f"bg:: start generating chapter: {novelist.next_chapter_num}")
+                    logger.info(f"Background task: Starting chapter generation - Chapter: {novelist.next_chapter_num}")
                     chapter_content = novelist.write_next_chapter()
                     chapter.content = chapter_content
                     chapter.status = NovelStatus.COMPLETED
                     db.session.commit()
-                    print("bg:: chapter generated and commited")
+                    logger.info(
+                        f"Background task: Chapter generated and committed - Chapter: {novelist.next_chapter_num - 1}"
+                    )
 
                 except Exception as e:
                     # 章の生成が完全に失敗した場合
-                    print(f"bg:: error: chapter generation failed - {type(e).__name__}: {e}")
+                    logger.error(f"Background task: Chapter generation failed - {type(e).__name__}: {e}")
                     handle_chapter_generation_failure(
                         novel_id=novel_id, chapter_id=chapter.id, error=e, db_session=db.session
                     )
-                    print("bg:: task stopped due to chapter generation failure")
+                    logger.info("Background task: Task stopped due to chapter generation failure")
                     return  # 生成を停止
 
             # 全章完了
             novel_data.status = NovelStatus.COMPLETED
             db.session.commit()
-            print("bg:: novel commited, task done")
+            logger.info(f"Background task: Novel completed and committed - Novel ID: {novel_id}")
 
         except Exception as e:
             # タスク全体のエラー（DB接続エラーなど）
-            print(f"bg:: critical error: background task failed - {type(e).__name__}: {e}")
+            logger.error(f"Background task: Critical error - {type(e).__name__}: {e}")
             try:
                 # 小説をFAILEDにマーク
                 mark_novel_as_failed(
@@ -131,8 +135,8 @@ def novelist_bg_task_runner(novelist, novel_id, start_from_chapter=None):
                 )
             except Exception as mark_error:
                 # エラー処理自体が失敗しても無視
-                print(f"bg:: error: failed to mark novel as failed - {mark_error}")
-            print("bg:: task terminated due to critical error")
+                logger.error(f"Background task: Failed to mark novel as failed - {mark_error}")
+            logger.error("Background task: Task terminated due to critical error")
 
 
 # --- model ---
@@ -249,10 +253,16 @@ class NovelStream(Resource):
     @api.doc("post_novels")
     @api.expect(novel_start_model)
     def post(self):
-        """最初に送る小説の設定的なの
+        """小説の設定を受け取り、ストリーミング形式で小説生成を開始する
+
+        Request Body:
+            user_id (str): ユーザーID
+            genre (str): 小説のジャンル
+            textLen (int): 目標文字数
+            style (str): 文体
 
         Returns:
-
+            Response: プロットと各章をストリーミング形式で返すレスポンス
         """
         try:
             # リクエストボディの解凍.
@@ -298,21 +308,23 @@ class NovelStream(Resource):
                     novel = db.session.get(Novel, novel_id)
                     novel.overall_plot = plot
                     db.session.commit()
-                    print(f"Plot generated: {count}")
+                    logger.info(f"Plot generated - Novel ID: {novel_id}, Count: {count}")
                     yield json.dumps({"response_count": count, "plot": plot}, ensure_ascii=False) + "\n"
 
                     for count, chapter in gen:
-                        print(f"Chapter {count} generated, length: {len(chapter)}")
+                        logger.info(
+                            f"Chapter generated - Novel ID: {novel_id}, Chapter: {count}, Length: {len(chapter)}"
+                        )
                         chapter_data = Chapter(chapter_number=count, content=chapter, novel_id=novel_id)
                         db.session.add(chapter_data)
-                        print(f"Chapter {count} added to session")
+                        logger.debug(f"Chapter added to session - Chapter: {count}")
                         yield json.dumps({"response_count": count, "chapter": chapter}, ensure_ascii=False) + "\n"
 
                     db.session.commit()
-                    print("All chapters committed to database")
+                    logger.info(f"All chapters committed to database - Novel ID: {novel_id}")
                     yield json.dumps({"response_count": count + 1, "fin": True}, ensure_ascii=False) + "\n"
                 except Exception as e:
-                    print(f"Error in novel_generater: {str(e)}")
+                    logger.error(f"Error in novel_generater - Novel ID: {novel_id}: {str(e)}")
                     import traceback
 
                     traceback.print_exc()
@@ -375,8 +387,23 @@ class NovelContent(Resource):
         Args:
             novel_id (str): 小説のID
 
+        Request Headers:
+            X-User-ID (str): ユーザーID
+            X-Current-Index (str): フロント側が持っている最後の章の番号
+
         Returns:
-            dict: 小説のID、タイトル、結合されたテキスト内容
+            dict: {
+                novel_status(string):小説のステータス,
+                current_chapter(int):現在生成中または失敗した章番号,
+                total_chapter_number(int):小説の全章数,
+                new_chapters(list):新たに生成された章のリスト [
+                    {
+                        index(int):章番号,
+                        content(string):章の内容
+                    },
+                    ...
+                ]
+            }
         """
         novel = db.session.get(Novel, novel_id)
         user_id = request.headers.get("X-User-ID")
@@ -427,14 +454,14 @@ class NovelInit(Resource):
         """小説生成ジョブを開始し、第1章の内容を返す
 
         Request Body:
-            - user_id (string): ユーザーID
-            - novel_setting (dict):
-            - - ideal_text_length (int): 目標文字数
-            - - genre (string): sf, fantasy, mystery, horror, romance, history, light_novel, youthのどれか
-            - - style (string): 文体
+            user_id (str): ユーザーID
+            novel_setting (dict): 小説の設定
+                ideal_text_length (int): 目標文字数
+                genre (str): ジャンル
+                style (str): 文体
 
         Returns:
-            dict: novel_id(string), title(string), total_chapter_number(int), first_chapter_text(string)
+            dict: 小説ID、タイトル、全章数、第1章の内容を含む辞書
         """
         try:
             # データ解凍.
@@ -528,13 +555,16 @@ class NovelText(Resource):
         """小説idから作成済みのチャプター本文を結合して返す
 
         Args:
-            novel_id (string): 小説id
-            X-User-ID (string): user id
+            novel_id (str): 小説ID
+
+        Request Headers:
+            X-User-ID (str): ユーザーID
 
         Returns:
             dict: {
                 text(string):結合されたテキスト,
                 last_chapter(int):結合された最後のチャプター番号,
+                total_chapter_number(int):小説の全チャプター数,
                 has_all_chapters(boolean):生成予定のチャプターがすべて結合され、全文が返ったか
                 }
         """
@@ -574,28 +604,14 @@ class NovelRetries(Resource):
     def post(self, novel_id):
         """失敗した小説の生成を再開する
 
-        FAILEDステータスの小説から最初のFAILED章を特定し、
-        retry_failed_chapter()を使って再生成します。
-        成功後はバックグラウンドタスクで後続章を生成します。
-
         Args:
-            novel_id (string): 小説のID
+            novel_id (str): 小説のID
 
         Request Body:
-            user_id (string): ユーザーID
+            user_id (str): ユーザーID
 
         Returns:
-            dict: {
-                novel_id: 小説ID,
-                retried_chapter: 再生成した章番号,
-                chapter_content: 生成された章の内容
-            }
-
-        Errors:
-            400: リクエストボディが不正、小説がFAILED状態でない、またはFAILED章が見つからない
-            403: ユーザー権限なし
-            404: 小説が見つからない、ユーザーが見つからない
-            500: 章の再生成失敗
+            dict: 小説ID、再生成した章番号、生成された章の内容を含む辞書
         """
         try:
             # リクエストボディからuser_idを取得
