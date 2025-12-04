@@ -71,6 +71,19 @@ class _NovelListScreenState extends State<NovelListScreen> with RouteAware {
     return Scaffold(
       appBar: AppBar(
         title: const Text('小説一覧'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.info_outline),
+            onPressed: () {
+              showLicensePage(
+                context: context,
+                applicationName: 'Novel App',
+                applicationVersion: '1.0.0+1',
+                applicationIcon: const Icon(Icons.book),
+              );
+            },
+          ),
+        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(kToolbarHeight / 2),
           child: Align(
