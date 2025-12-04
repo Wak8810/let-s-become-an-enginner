@@ -18,6 +18,7 @@ class _NovelGenerateScreenState extends State<NovelGenerateScreen> {
   String selectedGenre = 'sf';
   int selectedTime = 0;
   int selectedUnit = 1;
+  double selectedReadingSpeed = 1;
   String selectedStyle = '一人称視点';
   bool canSubmit = false;
 
@@ -193,6 +194,35 @@ class _NovelGenerateScreenState extends State<NovelGenerateScreen> {
                       ),
                     ),
                   ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    "読む速さ",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  Card(
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: DropdownMenu<double>(
+                        initialSelection: selectedReadingSpeed,
+                        dropdownMenuEntries: [
+                          DropdownMenuEntry(value: 1, label: '普通'),
+                          DropdownMenuEntry(value: 2, label: '速い'),
+                          DropdownMenuEntry(value: 0.5, label: '遅い'),
+                        ],
+                        onSelected: (value) {
+                          if (value != null) {
+                            setState(() {
+                              selectedReadingSpeed = value;
+                            });
+                          }
+                        },
+                      ),
+                    ),
+                  ),
 
                   const Spacer(),
 
@@ -213,8 +243,12 @@ class _NovelGenerateScreenState extends State<NovelGenerateScreen> {
                             context,
                             MaterialPageRoute(
                               builder: (context) => NovelGeneratingScreen(
-                                length: (selectedTime * selectedUnit * 450)
-                                    .toString(),
+                                length:
+                                    (selectedTime *
+                                            selectedUnit *
+                                            450 *
+                                            selectedReadingSpeed)
+                                        .toString(),
                                 genre: selectedGenre,
                                 style: selectedStyle,
                                 userId: _userId,
