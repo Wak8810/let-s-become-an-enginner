@@ -102,9 +102,9 @@ def novelist_bg_task_runner(novelist, novel_id, start_from_chapter=None):
                     logger.info(f"Background task: Starting chapter generation - Chapter: {novelist.next_chapter_num}")
                     chapter_content = novelist.write_next_chapter()
                     chapter.content = chapter_content
-                    content_length=len(chapter_content)
+                    content_length = len(chapter_content)
                     chapter.status = NovelStatus.COMPLETED
-                    novel_data.true_text_length+=content_length
+                    novel_data.true_text_length += content_length
                     db.session.commit()
                     logger.info(
                         f"Background task: Chapter generated and committed - Chapter: {novelist.next_chapter_num - 1}"
@@ -176,10 +176,10 @@ novel_item_model = api.model(
         "genre": fields.String(attribute="genre_code"),
         "style": fields.String(),
         "text_length": fields.Integer(),
-        "true_text_length":fields.Integer(),
-        "is_favorite":fields.Boolean(),
+        "true_text_length": fields.Integer(),
+        "is_favorite": fields.Boolean(),
         "user_id": fields.String(),
-        "novel_status":fields.Integer(attribute="status"),
+        "novel_status": fields.Integer(attribute="status"),
         "created_at": fields.DateTime(),
         "updated_at": fields.DateTime(),
     },
@@ -227,6 +227,8 @@ novel_retry_response_model = api.model(
         "chapter_content": fields.String(),
     },
 )
+novel_favorite_request_model = api.model("NovelFavoriteRequest", {"user_id": fields.String()})
+novel_favorite_response_model = api.model("NovelFavoriteResponse", {"is_favorite": fields.Boolean()})
 # -- parser --
 novels_text_parser = reqparse.RequestParser()
 novels_text_parser.add_argument("X-User-ID", location="headers", type=str, required=True, help="User id")
@@ -535,8 +537,8 @@ class NovelInit(Resource):
             # データベース記録.
             first_chapter.content = chapter
             first_chapter.status = NovelStatus.COMPLETED
-            content_length=len(chapter)
-            novel_data.true_text_length+=content_length
+            content_length = len(chapter)
+            novel_data.true_text_length += content_length
             db.session.commit()
             trd = threading.Thread(target=novelist_bg_task_runner, args=(novelist, novel_data.id))
             trd.daemon = False
@@ -697,10 +699,10 @@ class NovelRetries(Resource):
 
             # データベース更新
             failed_chapter.content = chapter_content
-            content_length=len(chapter_content)
+            content_length = len(chapter_content)
             failed_chapter.status = NovelStatus.COMPLETED
             novel.status = NovelStatus.GENERATING
-            novel.true_text_length+=content_length
+            novel.true_text_length += content_length
             db.session.commit()
 
             logger.info(f"Chapter {failed_chapter.chapter_number} successfully regenerated")
@@ -737,3 +739,26 @@ class NovelRetries(Resource):
             if hasattr(e, "code"):
                 raise
             api.abort(500, str(e))
+
+
+@api.route("/<string:novel_id>/favorite")
+class NovelFavorite(Resource):
+    @api.doc("put_favorite")
+    @api.expect(novel_favorite_request_model)
+    @api.marshal_with(novel_favorite_response_model)
+    def put(self, novel_id):
+        try:
+            novel = db.session.get(Novel, novel_id)
+            req_param = request.get_json()
+            user_id = req_param.get("user_id", "")
+            if not req_param:
+                api.abort(400, "Request body is required")
+            if not novel:
+                api.abort(404, "Novel not found")
+            if novel.user_id != user_id:
+                api.abort(403, "You do not have permission to access this novel")
+            novel.is_favorite = not novel.is_favorite
+            db.session.commit()
+            return {"is_favorite": novel.is_favorite}
+        except Exception as e:
+            api.abort(500, f"unexcepted error - {str(e)}")
