@@ -173,7 +173,7 @@ class _NovelGenerateScreenState extends State<NovelGenerateScreen> {
                                       (selectedTime *
                                               selectedUnit *
                                               450 *
-                                              selectedReadingSpeed)
+                                              selectedReadingSpeed.toInt())
                                           .toString(),
                                   genre: selectedGenre,
                                   style: selectedStyle,
