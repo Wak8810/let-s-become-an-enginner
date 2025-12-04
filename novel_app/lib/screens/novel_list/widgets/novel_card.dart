@@ -64,7 +64,7 @@ class NovelCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 8.0),
                   Text(
-                    '文字数: ${novel.textLength}文字',
+                    '文字数: ${novel.novelGeneratingStatus == 2 ? novel.trueTextLength : novel.textLength}文字',
                     textAlign: TextAlign.right,
                     style: const TextStyle(
                       fontSize: 12.0,
@@ -75,7 +75,7 @@ class NovelCard extends StatelessWidget {
               ),
               const SizedBox(height: 12.0),
               Text(
-                novel.overallPlot,
+                novel.shortSummary,
                 overflow: TextOverflow.ellipsis,
                 maxLines: 1,
               ),
