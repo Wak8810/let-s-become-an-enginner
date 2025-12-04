@@ -102,7 +102,9 @@ def novelist_bg_task_runner(novelist, novel_id, start_from_chapter=None):
                     logger.info(f"Background task: Starting chapter generation - Chapter: {novelist.next_chapter_num}")
                     chapter_content = novelist.write_next_chapter()
                     chapter.content = chapter_content
+                    content_length=len(chapter_content)
                     chapter.status = NovelStatus.COMPLETED
+                    novel_data.true_text_length+=content_length
                     db.session.commit()
                     logger.info(
                         f"Background task: Chapter generated and committed - Chapter: {novelist.next_chapter_num - 1}"
@@ -530,6 +532,8 @@ class NovelInit(Resource):
             # データベース記録.
             first_chapter.content = chapter
             first_chapter.status = NovelStatus.COMPLETED
+            content_length=len(chapter)
+            novel_data.true_text_length+=content_length
             db.session.commit()
             trd = threading.Thread(target=novelist_bg_task_runner, args=(novelist, novel_data.id))
             trd.daemon = False
@@ -690,8 +694,10 @@ class NovelRetries(Resource):
 
             # データベース更新
             failed_chapter.content = chapter_content
+            content_length=len(chapter_content)
             failed_chapter.status = NovelStatus.COMPLETED
             novel.status = NovelStatus.GENERATING
+            novel.true_text_length+=content_length
             db.session.commit()
 
             logger.info(f"Chapter {failed_chapter.chapter_number} successfully regenerated")
