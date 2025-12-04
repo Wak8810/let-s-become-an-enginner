@@ -747,6 +747,16 @@ class NovelFavorite(Resource):
     @api.expect(novel_favorite_request_model)
     @api.marshal_with(novel_favorite_response_model)
     def put(self, novel_id):
+        """お気に入りフラグを入れ替える
+
+        Args:
+            novel_id (string): 小説のid
+
+        Returns:
+            dict:{
+                is_favorite(bool): 変更後のお気に入りフラグ
+            }
+        """
         try:
             novel = db.session.get(Novel, novel_id)
             req_param = request.get_json()
