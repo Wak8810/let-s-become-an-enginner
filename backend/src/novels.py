@@ -177,6 +177,7 @@ novel_item_model = api.model(
         "style": fields.String(),
         "text_length": fields.Integer(),
         "true_text_length":fields.Integer(),
+        "is_favorite":fields.Boolean(),
         "user_id": fields.String(),
         "novel_status":fields.Integer(attribute="status"),
         "created_at": fields.DateTime(),
