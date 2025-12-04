@@ -19,10 +19,10 @@ class NovelStatus(str, Enum):
     FAILED: 失敗
     """
 
-    PENDING = "PENDING"
-    GENERATING = "GENERATING"
-    COMPLETED = "COMPLETED"
-    FAILED = "FAILED"
+    PENDING = 0
+    GENERATING = 1
+    COMPLETED = 2
+    FAILED = 3
 
 
 class User(db.Model):
