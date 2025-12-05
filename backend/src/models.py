@@ -62,6 +62,7 @@ class Novel(db.Model):
     # status = db.Column(db.String(20), default="PENDING")  # PENDING, GENERATING, COMPLETED, FAILED
     # ジャンルコード
     genre_code = db.Column(db.String(32), db.ForeignKey("genres.code"), nullable=False)
+    mood_code = db.Column(db.String(32), db.ForeignKey("moods.code"), nullable=False)
     style = db.Column(db.String(50), nullable=True)
     text_length = db.Column(db.Integer, nullable=True)
     user_id = db.Column(db.String(32), db.ForeignKey("users.id"), nullable=False)
@@ -127,6 +128,27 @@ class Genre(db.Model):
 
     def __repr__(self):
         return f"<Genre id : {self.id} , genre : {self.genre}>"
+
+
+class Mood(db.Model):
+    """ムードテーブル
+
+    ムード（雰囲気）の情報を管理.
+    """
+
+    __tablename__ = "moods"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    # 英語スラッグ等の一意の内部コード
+    code = db.Column(db.String(32), unique=True, nullable=False)
+    # 表示名 (日本語ラベル)
+    mood = db.Column(db.String(32), nullable=False)
+
+    # リレーション: ムードは複数の小説を持つ
+    novels = db.relationship("Novel", backref="mood", lazy=True)
+
+    def __repr__(self):
+        return f"<Mood id : {self.id} , mood : {self.mood}>"
 
 
 class Test(db.Model):
