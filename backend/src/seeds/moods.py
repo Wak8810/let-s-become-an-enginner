@@ -17,6 +17,7 @@ MOODS: List[Dict[str, str]] = [
     {"code": "dark", "mood": "ダーク"},
     {"code": "dramatic", "mood": "ドラマチック"},
     {"code": "heartwarming", "mood": "ほのぼの"},
+    {"code":"none","mood":"指定なし"}
 ]
 
 

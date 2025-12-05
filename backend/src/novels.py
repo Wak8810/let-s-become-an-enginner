@@ -7,7 +7,7 @@ from flask import Blueprint, Response, request, stream_with_context
 from flask_restx import Namespace, Resource, fields, reqparse
 
 from src.database import db
-from src.models import Chapter, Genre, Novel, NovelStatus, User
+from src.models import Chapter, Genre, Mood, Novel, NovelStatus, User
 from src.services.error_handler import handle_chapter_generation_failure, mark_novel_as_failed
 from src.services.novel_generator import NovelGenerator  # ここでこれを使わないほうが綺麗だが必須ではない.
 from src.services.novelist import Novelist
@@ -102,9 +102,9 @@ def novelist_bg_task_runner(novelist, novel_id, start_from_chapter=None):
                     logger.info(f"Background task: Starting chapter generation - Chapter: {novelist.next_chapter_num}")
                     chapter_content = novelist.write_next_chapter()
                     chapter.content = chapter_content
-                    content_length=len(chapter_content)
+                    content_length = len(chapter_content)
                     chapter.status = NovelStatus.COMPLETED
-                    novel_data.true_text_length+=content_length
+                    novel_data.true_text_length += content_length
                     db.session.commit()
                     logger.info(
                         f"Background task: Chapter generated and committed - Chapter: {novelist.next_chapter_num - 1}"
@@ -162,6 +162,7 @@ novel_init_model = api.model(
                     "ideal_text_length": fields.Integer(description="request of novel's text length"),
                     "genre": fields.String(description="genre of novel"),
                     "style": fields.String(description="style"),
+                    "mood": fields.String(description="mood", required=False),
                 },
             )
         ),
@@ -174,11 +175,12 @@ novel_item_model = api.model(
         "title": fields.String(),
         "short_summary": fields.String(),
         "genre": fields.String(attribute="genre_code"),
+        "mood": fields.String(attribute="mood_code"),
         "style": fields.String(),
         "text_length": fields.Integer(),
-        "true_text_length":fields.Integer(),
+        "true_text_length": fields.Integer(),
         "user_id": fields.String(),
-        "novel_status":fields.Integer(attribute="status"),
+        "novel_status": fields.Integer(attribute="status"),
         "created_at": fields.DateTime(),
         "updated_at": fields.DateTime(),
     },
@@ -463,6 +465,7 @@ class NovelInit(Resource):
                 ideal_text_length (int): 目標文字数
                 genre (str): ジャンル
                 style (str): 文体
+                mood (str): 雰囲気 (省略可)
 
         Returns:
             dict: 小説ID、タイトル、全章数、第1章の内容を含む辞書
@@ -495,10 +498,16 @@ class NovelInit(Resource):
                 genre_exists = db.session.query(db.exists().where(Genre.code == genre_code)).scalar()
                 if not genre_exists:
                     return {"error": f"Invalid genre code: {genre_code}"}, 400
+            # moodのコード確認 or noneを代用.
+            mood_code = novelist.other_settings.get("mood", "none")
+            mood_exists = db.session.query(db.exists().where(Mood.code == mood_code)).scalar()
+            if not mood_exists:
+                return {"error": f"Invalid mood code: {mood_code}"}, 400
             # Novelのデータベース登録.
             novel_data = Novel(
                 style=novelist.other_settings.get("style"),
                 genre_code=novelist.other_settings.get("genre"),
+                mood_code=mood_code,
                 text_length=text_length,
                 title=novelist.other_novel_data.get("title", "untitled"),
                 overall_plot=novelist.plot,
@@ -534,8 +543,8 @@ class NovelInit(Resource):
             # データベース記録.
             first_chapter.content = chapter
             first_chapter.status = NovelStatus.COMPLETED
-            content_length=len(chapter)
-            novel_data.true_text_length+=content_length
+            content_length = len(chapter)
+            novel_data.true_text_length += content_length
             db.session.commit()
             trd = threading.Thread(target=novelist_bg_task_runner, args=(novelist, novel_data.id))
             trd.daemon = False
@@ -696,10 +705,10 @@ class NovelRetries(Resource):
 
             # データベース更新
             failed_chapter.content = chapter_content
-            content_length=len(chapter_content)
+            content_length = len(chapter_content)
             failed_chapter.status = NovelStatus.COMPLETED
             novel.status = NovelStatus.GENERATING
-            novel.true_text_length+=content_length
+            novel.true_text_length += content_length
             db.session.commit()
 
             logger.info(f"Chapter {failed_chapter.chapter_number} successfully regenerated")
