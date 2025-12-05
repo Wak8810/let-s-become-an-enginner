@@ -486,27 +486,39 @@ class NovelInit(Resource):
             user_data = db.session.query(User).filter_by(id=user_id).first()
             if not user_data:
                 return {"error": f"user not found - user_id: {user_id}"}, 404
+            # Validate genre code.
+            genre_code = novel_other_settings.get("genre")
+            if genre_code:
+                genre_exists = db.session.query(db.exists().where(Genre.code == genre_code)).scalar()
+                if not genre_exists:
+                    return {"error": f"Invalid genre code: {genre_code}"}, 400
+                # AIにGenre.genreを渡すようにnovel_other_settingを修正.
+                g_obj = Genre.query.filter_by(code=genre_code).first()
+                if g_obj:
+                    novel_other_settings["genre"] = g_obj.genre
+                else:
+                    return {"error": f"genre not found but exsist?: {genre_code}"}, 500
+            # moodのコード確認 or noneを代用.
+            mood_code = novel_other_settings.get("mood", "none")
+            mood_exists = db.session.query(db.exists().where(Mood.code == mood_code)).scalar()
+            # AIにMenre.moodを渡すようにnovel_other_settingを修正.
+            if not mood_exists:
+                return {"error": f"Invalid mood code: {mood_code}"}, 400
+            m_obj = Mood.query.filter_by(code=mood_code).first()
+            if m_obj:
+                novel_other_settings["mood"] = m_obj.mood
+            else:
+                return {"error": f"mood not found but exsist?: {mood_code}"}, 500
             # Novelist準備.
             logger.info("starting novelist setup")
             novelist = Novelist()
             novelist.set_first_params(text_length, novel_other_settings)
             novelist.prepare_novel()
             logger.info("finished novelist setup")
-            # Validate genre code.
-            genre_code = novelist.other_settings.get("genre")
-            if genre_code:
-                genre_exists = db.session.query(db.exists().where(Genre.code == genre_code)).scalar()
-                if not genre_exists:
-                    return {"error": f"Invalid genre code: {genre_code}"}, 400
-            # moodのコード確認 or noneを代用.
-            mood_code = novelist.other_settings.get("mood", "none")
-            mood_exists = db.session.query(db.exists().where(Mood.code == mood_code)).scalar()
-            if not mood_exists:
-                return {"error": f"Invalid mood code: {mood_code}"}, 400
             # Novelのデータベース登録.
             novel_data = Novel(
-                style=novelist.other_settings.get("style"),
-                genre_code=novelist.other_settings.get("genre"),
+                style=novel_other_settings.get("style", ""),
+                genre_code=genre_code,
                 mood_code=mood_code,
                 text_length=text_length,
                 title=novelist.other_novel_data.get("title", "untitled"),
