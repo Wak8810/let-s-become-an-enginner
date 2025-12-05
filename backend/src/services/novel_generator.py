@@ -1,4 +1,3 @@
-import json
 import logging
 import os
 
@@ -99,7 +98,10 @@ class NovelGenerator:
         Args:
             text_length: 目標文字数
             chapter_count: 章の数
-            other: その他の設定（ジャンル、スタイル等）
+            other: その他の設定
+                genre (str): ジャンル
+                mood (str): 雰囲気
+                style (str): 文体
 
         Returns:
             dict: 小説の初期データ（title, summary, plot, characters, chapter_plots）
@@ -107,12 +109,22 @@ class NovelGenerator:
         Raises:
             GeminiAPIError: API呼び出しまたはJSON検証でエラーが発生した場合
         """
-        logger.info(f"Generating initial data: text_length={text_length}, chapter_count={chapter_count}, other={other}")
+        # パラメータの解凍
+        genre = other.get("genre", "指定なし")
+        mood = other.get("mood", "指定なし")
+        style = other.get("style", "指定なし")
+
+        logger.info(
+            f"Generating initial data: text_length={text_length}, chapter_count={chapter_count}, genre='{genre}', mood='{mood}', style='{style}'"
+        )
 
         try:
             response = self.model.generate_content(
                 f"""下記の内容の小説を作成するのに、設定やプロット、登場人物等を具体的に作成してください。小説は全体で{text_length}文字程度、章は{chapter_count}です。
-            {json.dumps(other)}
+            - ジャンル: {genre}
+            - 雰囲気: {mood}
+            - 文章スタイル: {style}
+
             出力は以下のjson形式で行ってください、その他は一切出力してはいけません。:
             {{
                 "title":(novel's title),

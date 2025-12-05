@@ -466,9 +466,9 @@ class NovelInit(Resource):
             user_id (str): ユーザーID
             novel_setting (dict): 小説の設定
                 ideal_text_length (int): 目標文字数
-                genre (str): ジャンル
+                genre (str): ジャンル 次から選択:[sf, fantasy, mystery, horror, romance, history, light_novel, youth]
                 style (str): 文体
-                mood (str): 雰囲気 (省略可)
+                mood (str): 雰囲気 (省略可) 次から選択:[serious, comedy, dark, dramatic, heartwarming, none]
 
         Returns:
             dict: 小説ID、タイトル、全章数、第1章の内容を含む辞書

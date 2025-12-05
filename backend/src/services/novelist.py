@@ -40,6 +40,9 @@ class Novelist:
         Args:
             text_length (int): text_length
             others (dict): other settings
+                genre (str): ジャンル
+                mood (str): 雰囲気
+                style (str): 文体
         """
         self.target_text_length = text_length
         if not isinstance(others, dict):
