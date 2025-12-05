@@ -62,6 +62,7 @@ class Novel(db.Model):
     # status = db.Column(db.String(20), default="PENDING")  # PENDING, GENERATING, COMPLETED, FAILED
     # ジャンルコード
     genre_code = db.Column(db.String(32), db.ForeignKey("genres.code"), nullable=False)
+    mood_code = db.Column(db.String(32), db.ForeignKey("moods.code"), nullable=False)
     style = db.Column(db.String(50), nullable=True)
     text_length = db.Column(db.Integer, nullable=True)
     user_id = db.Column(db.String(32), db.ForeignKey("users.id"), nullable=False)
@@ -125,6 +126,7 @@ class Genre(db.Model):
 
     def __repr__(self):
         return f"<Genre id : {self.id} , genre : {self.genre}>"
+
 
 class Mood(db.Model):
     """ムードテーブル

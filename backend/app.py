@@ -10,6 +10,7 @@ from src.genres import genres_module
 from src.novels import api as novels_api
 from src.novels import novels_module
 from src.seeds.genres import seed_genres
+from src.seeds.moods import seed_moods
 from src.tests import api as test_api
 from src.tests import test_module
 from src.users import api as user_api
@@ -23,6 +24,7 @@ app = Flask(__name__)
 # データベースの初期化
 init_db(app)
 seed_genres(app)
+seed_moods(app)
 
 
 # flask-restxの設定
