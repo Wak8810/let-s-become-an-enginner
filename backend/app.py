@@ -42,7 +42,7 @@ api.add_namespace(genres_api, path="/genres")
 
 # /moods以下の登録
 app.register_blueprint(moods_module)
-api.add_namespace(moods_api, "/moods")
+api.add_namespace(moods_api, path="/moods")
 
 # /novels以下の登録.
 app.register_blueprint(novels_module)

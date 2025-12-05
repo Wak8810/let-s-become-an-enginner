@@ -17,7 +17,7 @@ MOODS: List[Dict[str, str]] = [
     {"code": "dark", "mood": "ダーク"},
     {"code": "dramatic", "mood": "ドラマチック"},
     {"code": "heartwarming", "mood": "ほのぼの"},
-    {"code":"none","mood":"指定なし"}
+    {"code": "none", "mood": "指定なし"},
 ]
 
 
@@ -28,7 +28,7 @@ def seed_moods(app: Flask) -> None:
         app (Flask): Flask アプリケーションインスタンス (アプリコンテキスト取得用)
     """
     with app.app_context():
-        # 既存ジャンルコード集合を取得
+        # 既存の雰囲気コード集合を取得
         existing_codes = {g.code for g in db.session.query(Mood.code).all()}
         created = 0  # 今回追加した件数
         for g in MOODS:
