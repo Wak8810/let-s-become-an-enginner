@@ -4,7 +4,6 @@
 """
 
 from datetime import datetime
-from email.policy import default
 from enum import Enum
 from uuid import uuid4
 
@@ -76,7 +75,7 @@ class Novel(db.Model):
     # init_data: Novelistのprepare_novel()で生成されたJSON
     init_data = db.Column(db.Text, nullable=True)
     # お気に入り.
-    is_favorite=db.Column(db.Boolean, nullable=False,default=False)
+    is_favorite = db.Column(db.Boolean, nullable=False, default=False)
 
     # リレーション: 小説は複数のチャプターを持つ
     chapters = db.relationship("Chapter", backref="novel", lazy=True, cascade="all, delete-orphan")
