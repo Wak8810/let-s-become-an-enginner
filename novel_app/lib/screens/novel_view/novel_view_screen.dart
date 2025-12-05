@@ -46,11 +46,9 @@ class _NovelViewScreenState extends State<NovelViewScreen> {
   }
 
   Future<void> _loadMore() async {
-    if (isLoading) return; // 連打防止
+    if (isLoading) return;
 
-    setState(() {
-      isLoading = true; // ボタンを消してクルクル開始
-    });
+    setState(() => isLoading = true);
 
     try {
       final (newText, newIndex) = await fetchRestNovel(
@@ -60,64 +58,95 @@ class _NovelViewScreenState extends State<NovelViewScreen> {
       );
 
       setState(() {
-        if (newText != "") {
-          fullText += '\n' + newText; // 文章を追加
+        if (newText.isNotEmpty) {
+          fullText += "\n$newText";
         }
         currentIndex = newIndex;
       });
     } finally {
-      setState(() {
-        isLoading = false; // ローディング終了
-      });
+      setState(() => isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: const Text('閲覧ページ'),
+        elevation: 0,
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black87,
+        title: Text(
+          '閲覧ページ',
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
+      body: Column(
+        children: [
+          // タイトル
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 10, 18, 8),
+            child: Text(
               widget.title,
-              style: Theme.of(
-                context,
-              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                height: 1.3,
+              ),
             ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      fullText,
-                      style: const TextStyle(fontSize: 16, height: 1.6),
-                    ),
-                    const SizedBox(height: 20),
+          ),
 
-                    isLoading
-                        ? const Center(child: CircularProgressIndicator())
-                        : (currentIndex >= widget.totalChapterNumber
-                              ? const SizedBox() // ← 何も表示しない
-                              : ElevatedButton(
-                                  onPressed: _loadMore,
-                                  child: const Text("続きを読み込む"),
-                                )),
-                  ],
+          // 本文
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 80),
+              child: Text(
+                fullText,
+                style: const TextStyle(
+                  fontSize: 18,
+                  height: 1.8,
+                  fontWeight: FontWeight.w400,
+                  color: Colors.black87,
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
+
+      // 下部にボタン固定（iPhoneアプリっぽい）
+      bottomNavigationBar: currentIndex >= widget.totalChapterNumber
+          ? const SizedBox(height: 0)
+          : Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                border: Border(top: BorderSide(color: Colors.black12)),
+              ),
+              child: SizedBox(
+                height: 48,
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: isLoading ? null : _loadMore,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.black,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: isLoading
+                      ? const CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation(Colors.white),
+                        )
+                      : const Text("続きを読み込む", style: TextStyle(fontSize: 16)),
+                ),
+              ),
+            ),
     );
   }
 }

@@ -15,12 +15,7 @@ void main() async {
     userId = newUser.id;
     await storage.write(key: 'user_id', value: userId);
   }
-  runApp(
-    Provider<String>.value(
-      value: userId,
-      child: const MyApp(),
-    ),
-  );
+  runApp(Provider<String>.value(value: userId, child: const MyApp()));
 }
 
 class MyApp extends StatelessWidget {
@@ -31,7 +26,14 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Novel App',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: const ColorScheme.light(
+          primary: Colors.black,
+          secondary: Colors.black,
+          surface: Colors.white,
+          background: Colors.white,
+          onPrimary: Colors.white,
+          onSurface: Colors.black,
+        ),
         useMaterial3: true,
       ),
       navigatorObservers: [routeObserver],
