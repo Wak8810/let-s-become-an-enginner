@@ -7,6 +7,8 @@ from flask_restx import Api, Resource
 from src.database import init_db
 from src.genres import api as genres_api
 from src.genres import genres_module
+from src.moods import api as moods_api
+from src.moods import moods_module
 from src.novels import api as novels_api
 from src.novels import novels_module
 from src.seeds.genres import seed_genres
@@ -37,6 +39,10 @@ api.add_namespace(test_api, path="/tests")
 # /genres以下の登録
 app.register_blueprint(genres_module)
 api.add_namespace(genres_api, path="/genres")
+
+# /moods以下の登録
+app.register_blueprint(moods_module)
+api.add_namespace(moods_api, "/moods")
 
 # /novels以下の登録.
 app.register_blueprint(novels_module)
