@@ -144,7 +144,7 @@ class _NovelGenerateScreenState extends State<NovelGenerateScreen> {
                     items: const [
                       DropdownMenuItem(value: 1, child: Text('普通')),
                       DropdownMenuItem(value: 2, child: Text('速い')),
-                      DropdownMenuItem(value: 0.5, child: Text('遅い')),
+                      DropdownMenuItem(value: 0.7, child: Text('遅い')),
                     ],
                     onChanged: (v) => setState(() => selectedReadingSpeed = v!),
                   ),
