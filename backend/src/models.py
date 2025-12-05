@@ -74,6 +74,8 @@ class Novel(db.Model):
     status = db.Column(db.Enum(NovelStatus), nullable=False, default=NovelStatus.PENDING)
     # init_data: Novelistのprepare_novel()で生成されたJSON
     init_data = db.Column(db.Text, nullable=True)
+    # お気に入り.
+    is_favorite = db.Column(db.Boolean, nullable=False, default=False)
 
     # リレーション: 小説は複数のチャプターを持つ
     chapters = db.relationship("Chapter", backref="novel", lazy=True, cascade="all, delete-orphan")
