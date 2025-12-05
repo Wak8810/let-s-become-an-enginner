@@ -179,6 +179,7 @@ novel_item_model = api.model(
         "style": fields.String(),
         "text_length": fields.Integer(),
         "true_text_length": fields.Integer(),
+        "is_favorite": fields.Boolean(),
         "user_id": fields.String(),
         "novel_status": fields.Integer(attribute="status"),
         "created_at": fields.DateTime(),
@@ -228,6 +229,8 @@ novel_retry_response_model = api.model(
         "chapter_content": fields.String(),
     },
 )
+novel_favorite_request_model = api.model("NovelFavoriteRequest", {"user_id": fields.String()})
+novel_favorite_response_model = api.model("NovelFavoriteResponse", {"is_favorite": fields.Boolean()})
 # -- parser --
 novels_text_parser = reqparse.RequestParser()
 novels_text_parser.add_argument("X-User-ID", location="headers", type=str, required=True, help="User id")
@@ -757,3 +760,36 @@ class NovelRetries(Resource):
             if hasattr(e, "code"):
                 raise
             api.abort(500, str(e))
+
+
+@api.route("/<string:novel_id>/favorite")
+class NovelFavorite(Resource):
+    @api.doc("put_favorite")
+    @api.expect(novel_favorite_request_model)
+    @api.marshal_with(novel_favorite_response_model)
+    def put(self, novel_id):
+        """お気に入りフラグを入れ替える
+
+        Args:
+            novel_id (string): 小説のid
+
+        Returns:
+            dict:{
+                is_favorite(bool): 変更後のお気に入りフラグ
+            }
+        """
+        try:
+            novel = db.session.get(Novel, novel_id)
+            req_param = request.get_json()
+            user_id = req_param.get("user_id", "")
+            if not req_param:
+                api.abort(400, "Request body is required")
+            if not novel:
+                api.abort(404, "Novel not found")
+            if novel.user_id != user_id:
+                api.abort(403, "You do not have permission to access this novel")
+            novel.is_favorite = not novel.is_favorite
+            db.session.commit()
+            return {"is_favorite": novel.is_favorite}
+        except Exception as e:
+            api.abort(500, f"unexcepted error - {str(e)}")
