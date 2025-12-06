@@ -8,6 +8,7 @@ Future<GeneratedNovel> fetchGeneratedNovel(
   String genre,
   String style,
   String userId,
+  String mood,
 ) async {
   final url = Uri.parse('$apiBaseUrl/novels/init');
   final novelData = {
@@ -16,6 +17,7 @@ Future<GeneratedNovel> fetchGeneratedNovel(
       "ideal_text_length": int.parse(ideal_text_length),
       "genre": genre,
       "style": style,
+      "mood":mood
     },
   };
   final response = await http.post(

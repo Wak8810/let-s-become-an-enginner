@@ -10,11 +10,13 @@ class NovelGeneratingScreen extends StatefulWidget {
     required this.length,
     required this.style,
     required this.userId,
+    required this.mood
   });
   final String genre;
   final String length;
   final String style;
   final String userId;
+  final String mood;
 
   @override
   State<NovelGeneratingScreen> createState() => _NovelGeneratingScreenState();
@@ -29,6 +31,7 @@ class _NovelGeneratingScreenState extends State<NovelGeneratingScreen> {
         widget.genre,
         widget.style,
         widget.userId,
+        widget.mood
       ), // ← APIここで呼ぶ
       builder: (context, snapshot) {
         // 通信中
