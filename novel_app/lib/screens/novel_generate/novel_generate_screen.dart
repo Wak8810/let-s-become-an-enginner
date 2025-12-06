@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/services.dart';
 import '../../models/genre.dart';
+import '../../models/mood.dart';
 import '../../utils/get_generate_settings.dart';
+import '../../utils/get_mood_setting.dart';
 import '../../screens/novel_generate/novel_generating_screen.dart';
 
 class NovelGenerateScreen extends StatefulWidget {
@@ -14,6 +16,7 @@ class NovelGenerateScreen extends StatefulWidget {
 
 class _NovelGenerateScreenState extends State<NovelGenerateScreen> {
   late Future<List<GenreData>> _genreFuture;
+  late Future<List<MoodData>> _moodFuture;
   late String _userId;
 
   String selectedGenre = 'sf';
@@ -21,12 +24,14 @@ class _NovelGenerateScreenState extends State<NovelGenerateScreen> {
   int selectedUnit = 1;
   double selectedReadingSpeed = 1;
   String selectedStyle = '一人称視点';
+  String selectedMood = 'none';
   bool canSubmit = false;
 
   @override
   void initState() {
     super.initState();
     _genreFuture = fetchGenreData();
+    _moodFuture = fetchMoodData();
   }
 
   @override
@@ -37,8 +42,8 @@ class _NovelGenerateScreenState extends State<NovelGenerateScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<GenreData>>(
-      future: _genreFuture,
+    return FutureBuilder<dynamic>(
+      future:Future.wait([_genreFuture, _moodFuture]),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
@@ -54,6 +59,8 @@ class _NovelGenerateScreenState extends State<NovelGenerateScreen> {
 
         final genres = snapshot.data!;
         if (selectedGenre.isEmpty) selectedGenre = genres[0].code;
+        final moods = snapshot.data!;
+        if (selectedGenre.isEmpty) selectedMood = moods[0].code;
 
         return Scaffold(
           backgroundColor: const Color(0xFFF5F5F7),
@@ -78,6 +85,23 @@ class _NovelGenerateScreenState extends State<NovelGenerateScreen> {
                           (g) => DropdownMenuItem(
                             value: g.code,
                             child: Text(g.genre),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (v) => setState(() => selectedGenre = v!),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                _sectionTitle("雰囲気"),
+                _card(
+                  child: DropdownButtonFormField<String>(
+                    value: selectedGenre,
+                    decoration: _inputDecoration(),
+                    items: moods
+                        .map(
+                          (g) => DropdownMenuItem(
+                            value: g.code,
+                            child: Text(g.mood),
                           ),
                         )
                         .toList(),
@@ -178,6 +202,7 @@ class _NovelGenerateScreenState extends State<NovelGenerateScreen> {
                                   genre: selectedGenre,
                                   style: selectedStyle,
                                   userId: _userId,
+                                  mood:selectedMood
                                 ),
                               ),
                             );
